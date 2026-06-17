@@ -52,7 +52,8 @@ class StaticASCIIMod(loader.Module):
             return
 
         self.is_running = True
-        msg = await utils.answer(message, "```\n...\n```")
+        msg = await utils.answer(message, "```\n...\n
+```")
         
         try:
             for char in args:
@@ -62,5 +63,3 @@ class StaticASCIIMod(loader.Module):
                 await asyncio.sleep(0.7)
         finally:
             self.is_running = False
-
-```
