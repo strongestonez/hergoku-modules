@@ -1,9 +1,9 @@
 # ---------------------------------------------------------------------------------
 # Name: TextToASCII
-# Description: ASCII анимация текста крупными буквами (Fun module)
-# Author: @cursedonluck
+# Description: ASCII анимация текста крупными буквами
+# Author: @cursedonluck (улучшено для Telegram)
 # Version: 3.2.0
-# meta banner: https://raw.githubusercontent.com/strongestonez/hergoku-modules/refs/heads/main/TextToASCII_Avatar.svg
+# meta banner: https://raw.githubusercontent.com/strongestonez/hergoku-modules/refs/heads/main/TextToASCII_Avatar.png
 # ---------------------------------------------------------------------------------
 
 from .. import loader, utils
@@ -354,23 +354,12 @@ class TextToASCIIMod(loader.Module):
         text = args.strip().upper()
         self.is_running = True
         
-        form = await self.inline.form(
-            text="<code>🎬 Запуск анимации...</code>",
-            message=message,
-            reply_markup=[],
-            force_me=False,
-            silent=True
-        )
-        
-        await asyncio.sleep(0.5)
-        
         try:
             all_chars_lines = []
             for char in text:
                 char_lines = self._get_char_art(char)
                 all_chars_lines.append(char_lines)
             
-            # Склеиваем построчно
             combined_lines = []
             for row in range(6):
                 row_parts = []
@@ -378,7 +367,14 @@ class TextToASCIIMod(loader.Module):
                     row_parts.append(char_lines[row])
                 combined_lines.append(''.join(row_parts))
             
-            # Анимируем - 4 этапа
+            form = await self.inline.form(
+                text=f"<pre>{self._format_for_telegram(combined_lines)}</pre>",
+                message=message,
+                reply_markup=[],
+                force_me=False,
+                silent=True
+            )
+            
             stages = [0.25, 0.5, 0.75, 1.0]
             delay = 0.2
             
@@ -420,25 +416,23 @@ class TextToASCIIMod(loader.Module):
                 ]
             )
         except Exception as e:
-            await form.edit(f"❌ Ошибка: {str(e)}")
+            await form.edit(f"❌ Ошибка: {str(e)}\n\n<code>{type(e).__name__}: {e}</code>")
+            import traceback
+            print(f"ERROR in textasciicmd: {traceback.format_exc()}")
         finally:
             self.is_running = False
 
     async def _restart_animation(self, call: InlineCall, text: str):
-        """Перезапускает анимацию"""
-        await call.edit("<code>🎬 Перезапуск анимации...</code>")
-        await asyncio.sleep(0.5)
+        await call.edit("<code>🎬 Перезапуск...</code>")
         
         self.is_running = True
         
         try:
-            # Собираем все буквы
             all_chars_lines = []
             for char in text:
                 char_lines = self._get_char_art(char)
                 all_chars_lines.append(char_lines)
             
-            # Склеиваем построчно
             combined_lines = []
             for row in range(6):
                 row_parts = []
@@ -446,7 +440,6 @@ class TextToASCIIMod(loader.Module):
                     row_parts.append(char_lines[row])
                 combined_lines.append(''.join(row_parts))
             
-            # Анимируем - 4 этапа
             stages = [0.25, 0.5, 0.75, 1.0]
             delay = 0.2
             
