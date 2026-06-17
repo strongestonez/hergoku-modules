@@ -1,0 +1,52 @@
+# ---------------------------------------------------------------------------------
+# Name: NitroFarmer
+# Description: Модуль для перебора ключей Discord Nitro.
+# Author: Knight
+# ---------------------------------------------------------------------------------
+
+from .. import loader, utils
+import random
+import string
+import asyncio
+import aiohttp
+
+@loader.tds
+class NitroFarmerMod(loader.Module):
+    """Ферма для перебора Nitro ключей."""
+    strings = {"name": "NitroFarmer"}
+
+    async def farmnitrocmd(self, message):
+        """Запустить процесс поиска. Использование: .farmnitro"""
+        await utils.answer(message, "<b>[NitroFarmer]</b> Запуск процесса...")
+        
+        valid = 0
+        invalid = 0
+        
+        async with aiohttp.ClientSession() as session:
+            while True:
+                # Генерация 16-значного кода
+                code = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+                url = f"https://discord.com/api/v9/entitlements/gift-codes/{code}?with_application=false&with_subscription_plan=true"
+                
+                try:
+                    async with session.get(url) as response:
+                        if response.status == 200:
+                            await utils.answer(message, f"<b>[!] НАЙДЕНО!</b>\nКод: <code>{code}</code>")
+                            break
+                        else:
+                            invalid += 1
+                except Exception:
+                    pass
+
+                # Обновление сообщения каждые 10 попыток для экономии API
+                if invalid % 10 == 0:
+                    await message.edit(
+                        f"<b>[NitroFarmer]</b> Фарм идет...\n"
+                        f"Проверено: {invalid}\n"
+                        f"Валидных: {valid}\n"
+                        f"Последний проверенный: <code>{code}</code>"
+                    )
+                
+                # Задержка, чтобы не схватить бан от Discord
+                await asyncio.sleep(1.5)
+
