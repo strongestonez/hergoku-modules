@@ -1,10 +1,12 @@
 # ---------------------------------------------------------------------------------
 # Name: TextToASCII
-# Description: Пиши символами такими красивыми они гигантики и с эффектиками хихи
-# Author: @cursedonluck
+# Description: Пиши символами такими большими гигантики хихи (Telegram оптимизировано).
+# Author: @cursedonluck (улучшено для Telegram)
+# Version: 2.2.0
 # ---------------------------------------------------------------------------------
 
 from .. import loader, utils
+from ..inline.types import InlineCall
 import asyncio
 import math
 import random
@@ -14,9 +16,9 @@ import random
 CHAR_MAP = {
     # Кириллица - все буквы 8×6 символов для идеального выравнивания
     'А': [
-        "·██████·",
-        "█······█",
-        "█······█",
+        "···██···",
+        "··█··█··",
+        "·█····█·",
         "████████",
         "█······█",
         "█······█"
@@ -72,7 +74,7 @@ CHAR_MAP = {
     'Ж': [
         "█··█··█·",
         "█··█··█·",
-        "·█████··",
+        "·██████·",
         "█··█··█·",
         "█··█··█·",
         "█··█··█·"
@@ -94,21 +96,20 @@ CHAR_MAP = {
         "██····█·"
     ],
     'Й': [
-        "··███···",
+        "·█··█···",
         "█·····█·",
         "█····██·",
         "█···█·█·",
-        "█··█··█·",
         "█·█···█·",
         "██····█·"
     ],
     'К': [
-        "█···██··",
-        "█··█····",
-        "███·····",
-        "███·····",
-        "█··█····",
-        "█···██··"
+        "█····██·",
+        "█···█···",
+        "████····",
+        "████····",
+        "█···█···",
+        "█····██·"
     ],
     'Л': [
         "····██··",
@@ -185,7 +186,7 @@ CHAR_MAP = {
     'Ф': [
         "···███··",
         "·███████",
-        "·█··█··█",
+        "█···█··█",
         "·███████",
         "····█···",
         "····█···"
@@ -204,7 +205,7 @@ CHAR_MAP = {
         "█·····█·",
         "█·····█·",
         "███████·",
-        "······██"
+        "······█·"
     ],
     'Ч': [
         "█·····█·",
@@ -219,8 +220,8 @@ CHAR_MAP = {
         "█··█··█·",
         "█··█··█·",
         "█··█··█·",
-        "███████·",
-        "███████·"
+        "████████",
+        "████████"
     ],
     'Щ': [
         "█··█··█·",
@@ -257,7 +258,7 @@ CHAR_MAP = {
     'Э': [
         "··█████·",
         "·█·····█",
-        "····████",
+        "····███·",
         "·······█",
         "·█·····█",
         "··█████·"
@@ -292,17 +293,72 @@ CHAR_MAP = {
 
 @loader.tds
 class TextToASCIIMod(loader.Module):
-    """Крупные ASCII буквы с анимацией. Типа красива."""
+    """Крупные ASCII буквы с анимацией. Используй: .textascii <текст>"""
     strings = {
         "name": "TextToASCII",
-        "textascii_desc": "Показывает крупные ASCII буквы с анимацией по одной",
-        "asciiall_desc": "Показывает все буквы сразу с анимацией",
+        "textascii_desc": "Показывает крупные ASCII буквы с анимацией",
         "asciistopage_desc": "Останавливает текущую анимацию",
         "asciieffects_desc": "Показывает список всех доступных эффектов"
     }
 
     def __init__(self):
         self.is_running = False
+
+    async def _restart_animation(self, call: InlineCall, text: str, effect: str):
+        """Обработчик кнопки 'Перезапустить анимацию'"""
+        if self.is_running:
+            await call.answer("⚠️ Анимация уже запущена!", show_alert=True)
+            return
+        
+        self.is_running = True
+        
+        # Показываем статус
+        await call.edit("<code>🔄 Перезапуск анимации...</code>")
+        await asyncio.sleep(0.5)
+        
+        try:
+            if effect == 'all':
+                # Все буквы сразу
+                await self._animate_all_chars(call, text, 'wave')
+            else:
+                # По одной букве
+                for char in text:
+                    if not self.is_running:
+                        break
+                    ascii_lines = self._get_char_art(char)
+                    await self._animate_single_char(call, ascii_lines, effect)
+                    await asyncio.sleep(0.3)
+            
+            # После завершения показываем форму с кнопкой снова
+            await self.inline.form(
+                text=(
+                    f"<b>✨ Анимация завершена!</b>\n"
+                    f"<i>Текст: {text} | Эффект: {effect.upper()}</i>\n\n"
+                    f"💡 <i>Нажмите кнопку для повтора</i>"
+                ),
+                message=call.form["chat"],
+                reply_markup=[
+                    [
+                        {
+                            "text": "🔄 Перезапустить анимацию",
+                            "callback": self._restart_animation,
+                            "args": (text, effect)
+                        }
+                    ],
+                    [
+                        {
+                            "text": "❌ Закрыть",
+                            "action": "close"
+                        }
+                    ]
+                ],
+                force_me=False,
+                silent=True
+            )
+        except Exception as e:
+            await call.edit(f"❌ Ошибка: {str(e)}")
+        finally:
+            self.is_running = False
 
     def _get_char_art(self, char: str) -> list:
         """Возвращает готовый арт для одной конкретной буквы из CHAR_MAP."""
@@ -531,11 +587,31 @@ class TextToASCIIMod(loader.Module):
                     await self._animate_single_char(msg, ascii_lines, effect)
                     await asyncio.sleep(0.3)
             
-            # После завершения показываем информацию о перезапуске
-            await msg.edit(
-                f"<b>✨ Анимация завершена!</b>\n"
-                f"<i>Текст: {text} | Эффект: {effect.upper()}</i>\n\n"
-                f"💡 <i>Для повтора запустите команду снова</i>"
+            # После завершения показываем форму с кнопкой для перезапуска
+            await self.inline.form(
+                text=(
+                    f"<b>✨ Анимация завершена!</b>\n"
+                    f"<i>Текст: {text} | Эффект: {effect.upper()}</i>\n\n"
+                    f"💡 <i>Нажмите кнопку для повтора</i>"
+                ),
+                message=msg,
+                reply_markup=[
+                    [
+                        {
+                            "text": "🔄 Перезапустить анимацию",
+                            "callback": self._restart_animation,
+                            "args": (text, effect)
+                        }
+                    ],
+                    [
+                        {
+                            "text": "❌ Закрыть",
+                            "action": "close"
+                        }
+                    ]
+                ],
+                force_me=False,
+                silent=True
             )
             
         except Exception as e:
@@ -544,15 +620,14 @@ class TextToASCIIMod(loader.Module):
             self.is_running = False
 
     async def _animate_single_char(self, msg, lines: list, effect: str):
-        """Анимирует одну букву с выбранным эффектом."""
-        frames = 15  # Количество кадров анимации
-        delay = 0.05  # Задержка между кадрами
+        """Анимирует одну букву с выбранным эффектом - 4 этапа (25%, 50%, 75%, 100%)."""
+        # Всего 4 этапа для избежания FloodWait
+        stages = [0.25, 0.5, 0.75, 1.0]
+        delay = 0.15  # Задержка между этапами
         
-        for frame in range(frames + 1):
+        for idx, progress in enumerate(stages):
             if not self.is_running:
                 break
-                
-            progress = frame / frames
             
             if effect == 'fade':
                 animated_lines = self._animate_fade_in(lines, progress)
@@ -563,7 +638,7 @@ class TextToASCIIMod(loader.Module):
             elif effect == 'center':
                 animated_lines = self._animate_center_out(lines, progress)
             elif effect == 'wave':
-                animated_lines = self._animate_wave(lines, progress, frame)
+                animated_lines = self._animate_wave(lines, progress, idx)
             elif effect == 'random':
                 animated_lines = self._animate_random_dots(lines, progress, 42)
             else:
@@ -571,13 +646,16 @@ class TextToASCIIMod(loader.Module):
             
             formatted_art = self._format_for_telegram(animated_lines)
             try:
-                await msg.edit(f"<pre>{formatted_art}</pre>")
+                # Проверяем тип объекта (обычное сообщение или InlineCall)
+                if hasattr(msg, 'edit'):
+                    # Обычное сообщение или InlineCall - оба имеют .edit()
+                    await msg.edit(f"<pre>{formatted_art}</pre>")
                 await asyncio.sleep(delay)
             except:
                 pass
 
     async def _animate_all_chars(self, msg, text: str, effect: str):
-        """Анимирует все буквы одновременно горизонтально."""
+        """Анимирует все буквы одновременно горизонтально - 4 этапа."""
         # Собираем все буквы (теперь все 8×6, не нужна нормализация!)
         all_chars_lines = []
         
@@ -593,112 +671,24 @@ class TextToASCIIMod(loader.Module):
                 row_parts.append(char_lines[row])
             combined_lines.append(''.join(row_parts))  # Без разделителя!
         
-        # Анимируем
-        frames = 20
-        delay = 0.08
+        # Анимируем - только 4 этапа для избежания FloodWait
+        stages = [0.25, 0.5, 0.75, 1.0]
+        delay = 0.2  # Задержка между этапами
         
-        for frame in range(frames + 1):
+        for idx, progress in enumerate(stages):
             if not self.is_running:
                 break
                 
-            progress = frame / frames
-            animated_lines = self._animate_wave(combined_lines, progress, frame)
+            animated_lines = self._animate_wave(combined_lines, progress, idx)
             formatted_art = self._format_for_telegram(animated_lines)
             
             try:
-                await msg.edit(f"<pre>{formatted_art}</pre>")
+                # Проверяем тип объекта (обычное сообщение или InlineCall)
+                if hasattr(msg, 'edit'):
+                    await msg.edit(f"<pre>{formatted_art}</pre>")
                 await asyncio.sleep(delay)
             except:
                 pass
-
-    async def asciiallcmd(self, message):
-        """Команда: .asciiall <текст> [эффект]
-        
-        Показывает все буквы сразу с анимацией.
-        
-        Эффекты: fade, line, left, center, wave, random
-        Пример: .asciiall привет wave
-        """
-        if self.is_running:
-            await utils.answer(message, "⚠️ Анимация уже запущена! Дождитесь завершения.")
-            return
-
-        args = utils.get_args_raw(message).split()
-        if not args:
-            await utils.answer(message, 
-                "❌ Укажи текст и опционально эффект!\n\n"
-                "<b>Примеры:</b>\n"
-                "<code>.asciiall привет</code>\n"
-                "<code>.asciiall привет wave</code>\n\n"
-                "<b>Эффекты:</b> fade, line, left, center, wave, random"
-            )
-            return
-
-        text = args[0].strip().upper()
-        effect = args[1].lower() if len(args) > 1 else 'wave'
-        
-        self.is_running = True
-        msg = await utils.answer(message, f"<code>🎬 Загрузка...</code>")
-        
-        try:
-            # Собираем все буквы (теперь все 8×6, не нужна нормализация!)
-            all_chars_lines = []
-            
-            for char in text:
-                char_lines = self._get_char_art(char)
-                all_chars_lines.append(char_lines)
-            
-            # Склеиваем построчно БЕЗ разделителя
-            combined_lines = []
-            for row in range(6):  # Все буквы строго 6 строк
-                row_parts = []
-                for char_lines in all_chars_lines:
-                    row_parts.append(char_lines[row])
-                combined_lines.append(''.join(row_parts))  # Без разделителя!
-            
-            # Анимируем с выбранным эффектом
-            frames = 20
-            delay = 0.08
-            
-            for frame in range(frames + 1):
-                if not self.is_running:
-                    break
-                    
-                progress = frame / frames
-                
-                if effect == 'fade':
-                    animated_lines = self._animate_fade_in(combined_lines, progress)
-                elif effect == 'line':
-                    animated_lines = self._animate_line_by_line(combined_lines, progress)
-                elif effect == 'left':
-                    animated_lines = self._animate_left_to_right(combined_lines, progress)
-                elif effect == 'center':
-                    animated_lines = self._animate_center_out(combined_lines, progress)
-                elif effect == 'wave':
-                    animated_lines = self._animate_wave(combined_lines, progress, frame)
-                elif effect == 'random':
-                    animated_lines = self._animate_random_dots(combined_lines, progress, 42)
-                else:
-                    animated_lines = combined_lines
-                
-                formatted_art = self._format_for_telegram(animated_lines)
-                try:
-                    await msg.edit(f"<pre>{formatted_art}</pre>")
-                    await asyncio.sleep(delay)
-                except:
-                    pass
-            
-            # После завершения показываем информацию
-            await asyncio.sleep(0.5)
-            await msg.edit(
-                f"<b>✨ Анимация завершена!</b>\n"
-                f"<i>Текст: {text} | Эффект: {effect.upper()}</i>\n\n"
-                f"💡 <i>Для повтора запустите команду снова</i>"
-            )
-        except Exception as e:
-            await msg.edit(f"❌ Ошибка: {str(e)}")
-        finally:
-            self.is_running = False
 
     async def asciistopagecmd(self, message):
         """Команда: .asciistopage
@@ -760,13 +750,14 @@ class TextToASCIIMod(loader.Module):
             
             "<b>💡 Советы:</b>\n"
             "• Эффект можно не указывать (будет fade)\n"
-            "• Для быстрого показа используйте <code>.asciiall</code>\n"
+            "• Для показа всех букв сразу используйте эффект <code>all</code>\n"
             "• wave и random - самые зрелищные!\n\n"
             
             "<b>📝 Примеры команд:</b>\n"
             "<code>.textascii привет</code> - с эффектом по умолчанию\n"
             "<code>.textascii привет wave</code> - с волной\n"
-            "<code>.asciiall круто random</code> - все буквы сразу"
+            "<code>.textascii круто random</code> - случайные пиксели\n"
+            "<code>.textascii слово all</code> - все буквы сразу"
         )
         
         await utils.answer(message, effects_info)
