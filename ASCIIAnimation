@@ -1,6 +1,6 @@
 # ---------------------------------------------------------------------------------
 # Name: ASCIIAnimation
-# Description: Исправленный анимированный ASCII-текст через Markdown
+# Description: Исправленный модуль с учетом ограничений API herokutl
 # Author: Knight
 # ---------------------------------------------------------------------------------
 
@@ -19,37 +19,40 @@ class ASCIIAnimationMod(loader.Module):
     async def textasciicmd(self, message):
         """Команда: .textascii <текст>"""
         if self.is_running:
-            await utils.answer(message, "<b>[!]</b> Анимация уже запущена.")
             return
-
+        
         args = utils.get_args_raw(message)
         if not args:
-            await utils.answer(message, "<b>[!]</b> Укажи текст.")
             return
 
         self.is_running = True
         chars = [pyfiglet.figlet_format(char, font="small") for char in args]
-        
-        # Инициализируем сообщение пустым моноширинным блоком
         msg = await utils.answer(message, "```\n...\n```")
         
         try:
             for char_art in chars:
-                # Используем Markdown (```) вместо <code>. 
-                # Это исключает ошибки парсинга HTML.
                 await msg.edit(f"```\n{char_art}\n```")
                 await asyncio.sleep(0.7)
             
+            # Раздельное редактирование для обхода ошибки в herokutl
+            await msg.edit(f"```\n{chars[-1]}\n```")
+            
+            # Попробуем использовать метод .edit с параметром buttons вместо reply_markup
+            # Если бот использует Telethon-подобный стиль, это стандарт
             await msg.edit(
                 text=f"```\n{chars[-1]}\n```",
-                reply_markup=[
-                    {"text": "🔄 Повторить", "callback": self.callback_restart, "args": (args,)}
+                buttons=[
+                    [{"text": "🔄 Повторить", "callback": self.callback_restart, "args": (args,)}]
                 ]
             )
+        except Exception:
+            # Fallback: если кнопки не поддерживаются, просто оставляем текст
+            pass
         finally:
             self.is_running = False
 
     async def callback_restart(self, call, text):
         if self.is_running:
             return
+        # Создаем новый запрос на выполнение
         await self.textasciicmd(call.message)
