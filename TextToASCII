@@ -354,47 +354,52 @@ class TextToASCIIMod(loader.Module):
         text = args.strip().upper()
         self.is_running = True
         
+        form = await self.inline.form(
+            text="<code>🎬 Запуск...</code>",
+            message=message,
+            reply_markup=[],
+            force_me=False,
+            silent=True
+        )
+        
         try:
-            all_chars_lines = []
+            result_lines = [""] * 6
+            
             for char in text:
-                char_lines = self._get_char_art(char)
-                all_chars_lines.append(char_lines)
-            
-            combined_lines = []
-            for row in range(6):
-                row_parts = []
-                for char_lines in all_chars_lines:
-                    row_parts.append(char_lines[row])
-                combined_lines.append(''.join(row_parts))
-            
-            form = await self.inline.form(
-                text=f"<pre>{self._format_for_telegram(combined_lines)}</pre>",
-                message=message,
-                reply_markup=[],
-                force_me=False,
-                silent=True
-            )
-            
-            stages = [0.25, 0.5, 0.75, 1.0]
-            delay = 0.2
-            
-            for idx, progress in enumerate(stages):
                 if not self.is_running:
                     break
                     
-                animated_lines = self._animate_wave(combined_lines, progress, idx)
-                formatted_art = self._format_for_telegram(animated_lines)
+                char_lines = self._get_char_art(char)
                 
-                try:
-                    await form.edit(f"<pre>{formatted_art}</pre>")
-                    await asyncio.sleep(delay)
-                except:
-                    pass
+                stages = [0.25, 0.5, 0.75, 1.0]
+                delay = 0.15
+                
+                for idx, progress in enumerate(stages):
+                    if not self.is_running:
+                        break
+                    
+                    animated_char = self._animate_wave(char_lines, progress, idx)
+                    
+                    temp_lines = []
+                    for row in range(6):
+                        temp_lines.append(result_lines[row] + animated_char[row])
+                    
+                    formatted_art = self._format_for_telegram(temp_lines)
+                    
+                    try:
+                        await form.edit(f"<pre>{formatted_art}</pre>")
+                        await asyncio.sleep(delay)
+                    except:
+                        pass
+                
+                for row in range(6):
+                    result_lines[row] = result_lines[row] + char_lines[row]
             
-            # После завершения показываем кнопки
+            final_text = self._format_for_telegram(result_lines)
+            
             await form.edit(
                 text=(
-                    f"<pre>{self._format_for_telegram(combined_lines)}</pre>\n\n"
+                    f"<pre>{final_text}</pre>\n\n"
                     f"<b>✨ Анимация завершена!</b>\n\n"
                     f"<blockquote><b>📝 Текст:</b> {text}</blockquote>\n\n"
                     f"<i>💡 Нажмите кнопку для повтора</i>"
@@ -416,9 +421,7 @@ class TextToASCIIMod(loader.Module):
                 ]
             )
         except Exception as e:
-            await form.edit(f"❌ Ошибка: {str(e)}\n\n<code>{type(e).__name__}: {e}</code>")
-            import traceback
-            print(f"ERROR in textasciicmd: {traceback.format_exc()}")
+            await form.edit(f"❌ Ошибка: {str(e)}")
         finally:
             self.is_running = False
 
@@ -428,38 +431,43 @@ class TextToASCIIMod(loader.Module):
         self.is_running = True
         
         try:
-            all_chars_lines = []
+            result_lines = [""] * 6
+            
             for char in text:
-                char_lines = self._get_char_art(char)
-                all_chars_lines.append(char_lines)
-            
-            combined_lines = []
-            for row in range(6):
-                row_parts = []
-                for char_lines in all_chars_lines:
-                    row_parts.append(char_lines[row])
-                combined_lines.append(''.join(row_parts))
-            
-            stages = [0.25, 0.5, 0.75, 1.0]
-            delay = 0.2
-            
-            for idx, progress in enumerate(stages):
                 if not self.is_running:
                     break
                     
-                animated_lines = self._animate_wave(combined_lines, progress, idx)
-                formatted_art = self._format_for_telegram(animated_lines)
+                char_lines = self._get_char_art(char)
                 
-                try:
-                    await call.edit(f"<pre>{formatted_art}</pre>")
-                    await asyncio.sleep(delay)
-                except:
-                    pass
+                stages = [0.25, 0.5, 0.75, 1.0]
+                delay = 0.15
+                
+                for idx, progress in enumerate(stages):
+                    if not self.is_running:
+                        break
+                    
+                    animated_char = self._animate_wave(char_lines, progress, idx)
+                    
+                    temp_lines = []
+                    for row in range(6):
+                        temp_lines.append(result_lines[row] + animated_char[row])
+                    
+                    formatted_art = self._format_for_telegram(temp_lines)
+                    
+                    try:
+                        await call.edit(f"<pre>{formatted_art}</pre>")
+                        await asyncio.sleep(delay)
+                    except:
+                        pass
+                
+                for row in range(6):
+                    result_lines[row] = result_lines[row] + char_lines[row]
             
-            # После завершения показываем кнопки
+            final_text = self._format_for_telegram(result_lines)
+            
             await call.edit(
                 text=(
-                    f"<pre>{self._format_for_telegram(combined_lines)}</pre>\n\n"
+                    f"<pre>{final_text}</pre>\n\n"
                     f"<b>✨ Анимация завершена!</b>\n\n"
                     f"<blockquote><b>📝 Текст:</b> {text}</blockquote>\n\n"
                     f"<i>💡 Нажмите кнопку для повтора</i>"
