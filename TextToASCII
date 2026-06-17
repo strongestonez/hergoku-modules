@@ -1,9 +1,9 @@
 # ---------------------------------------------------------------------------------
 # Name: TextToASCII
-# Description: ASCII анимация текста крупными буквами
-# Author: @cursedonluck (улучшено для Telegram)
+# Description: ASCII анимация текста крупными буквами (Fun module)
+# Author: @cursedonluck
 # Version: 3.2.0
-# meta banner: https://raw.githubusercontent.com/strongestonez/hergoku-modules/refs/heads/main/TextToASCII_Avatar.png
+# meta banner: https://raw.githubusercontent.com/strongestonez/hergoku-modules/refs/heads/main/TextToASCII_Avatar.svg
 # ---------------------------------------------------------------------------------
 
 from .. import loader, utils
