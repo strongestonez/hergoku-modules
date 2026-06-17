@@ -2,7 +2,7 @@
 # Name: TextToASCII
 # Description: Пиши символами такими большими гигантики хихи (Telegram оптимизировано).
 # Author: @cursedonluck (улучшено для Telegram)
-# Version: 2.5.0
+# Version: 2.6.0
 # ---------------------------------------------------------------------------------
 
 from .. import loader, utils
@@ -561,30 +561,37 @@ class TextToASCIIMod(loader.Module):
             effect = 'fade'
 
         self.is_running = True
-        msg = await utils.answer(message, f"<code>🎬 Запуск анимации с эффектом: {effect.upper()}</code>")
+        
+        # Создаём inline форму СРАЗУ для анимации
+        form = await self.inline.form(
+            text=f"<code>🎬 Запуск анимации с эффектом: {effect.upper()}</code>",
+            message=message,
+            reply_markup=[],  # Пока без кнопок
+            force_me=False,
+            silent=True
+        )
+        
         await asyncio.sleep(0.5)
         
         try:
             if effect == 'all':
                 # Все буквы сразу с анимацией
-                await self._animate_all_chars(msg, text, 'wave')
+                await self._animate_all_chars(form, text, 'wave')
             else:
                 # По одной букве с эффектом
                 for char in text:
                     ascii_lines = self._get_char_art(char)
-                    await self._animate_single_char(msg, ascii_lines, effect)
+                    await self._animate_single_char(form, ascii_lines, effect)
                     await asyncio.sleep(0.3)
             
-            # После завершения редактируем ТО ЖЕ сообщение и добавляем кнопки через inline
-            # Используем inline.form с параметром message=msg для редактирования существующего сообщения
-            inline_msg = await self.inline.form(
+            # После завершения редактируем ТО ЖЕ inline сообщение и добавляем кнопки
+            await form.edit(
                 text=(
                     f"<b>✨ Анимация завершена!</b>\n\n"
                     f"<blockquote><b>📝 Текст:</b> {text.upper()}</blockquote>\n"
                     f"<blockquote><b>🎨 Эффект:</b> {effect.upper()}</blockquote>\n\n"
                     f"<i>💡 Нажмите кнопку ниже для повтора анимации</i>"
                 ),
-                message=msg,
                 reply_markup=[
                     [
                         {
@@ -599,13 +606,11 @@ class TextToASCIIMod(loader.Module):
                             "action": "close"
                         }
                     ]
-                ],
-                force_me=False,
-                silent=True
+                ]
             )
             
         except Exception as e:
-            await msg.edit(f"❌ Ошибка: {str(e)}")
+            await form.edit(f"❌ Ошибка: {str(e)}")
         finally:
             self.is_running = False
 
