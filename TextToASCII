@@ -1,16 +1,15 @@
 # ---------------------------------------------------------------------------------
 # Name: TextToASCII
-# Description: ASCII анимации. Команда: .textascii <текст> | Inline: @bot текст
-# Author: @cursedonluck
+# Description: ASCII анимация текста крупными буквами
+# Author: @cursedonluck (улучшено для Telegram)
 # Version: 3.2.0
-# meta banner: https://raw.githubusercontent.com/strongestonez/hergoku-modules/refs/heads/main/TextToASCII_Avatar.svg
+# meta banner: https://raw.githubusercontent.com/strongestonez/hergoku-modules/refs/heads/main/TextToASCII_Avatar.png
 # ---------------------------------------------------------------------------------
 
 from .. import loader, utils
 from ..inline.types import InlineCall
 import asyncio
 import math
-import random
 
 # Используем полноширинные символы для идеального отображения в Telegram
 # Используем █ (U+2588) для заполненных блоков и · (U+00B7) для пустых мест
@@ -75,7 +74,7 @@ CHAR_MAP = {
     'Ж': [
         "█··█··█·",
         "█··█··█·",
-        "·██████·",
+        "·█████·",
         "█··█··█·",
         "█··█··█·",
         "█··█··█·"
@@ -97,10 +96,10 @@ CHAR_MAP = {
         "██····█·"
     ],
     'Й': [
-        "·█··█···",
-        "█·····█·",
+        "··██···",
         "█····██·",
         "█···█·█·",
+        "█··█··█·",
         "█·█···█·",
         "██····█·"
     ],
@@ -187,7 +186,7 @@ CHAR_MAP = {
     'Ф': [
         "···███··",
         "·███████",
-        "█···█··█",
+        "·█··█··█",
         "·███████",
         "····█···",
         "····█···"
@@ -206,7 +205,7 @@ CHAR_MAP = {
         "█·····█·",
         "█·····█·",
         "███████·",
-        "······█·"
+        "······██"
     ],
     'Ч': [
         "█·····█·",
@@ -221,8 +220,8 @@ CHAR_MAP = {
         "█··█··█·",
         "█··█··█·",
         "█··█··█·",
-        "████████",
-        "████████"
+        "███████·",
+        "███████·"
     ],
     'Щ': [
         "█··█··█·",
@@ -259,7 +258,7 @@ CHAR_MAP = {
     'Э': [
         "··█████·",
         "·█·····█",
-        "····███·",
+        "····████",
         "·······█",
         "·█·····█",
         "··█████·"
@@ -294,150 +293,15 @@ CHAR_MAP = {
 
 @loader.tds
 class TextToASCIIMod(loader.Module):
-    """ASCII анимации. Команда: .textascii <текст> или inline: @bot текст"""
+    """ASCII анимация текста крупными буквами"""
     strings = {
         "name": "TextToASCII",
-        "textascii_desc": "Показывает меню выбора эффекта для ASCII анимации",
-        "asciistopage_desc": "Останавливает текущую анимацию",
-        "asciieffects_desc": "Показывает список всех доступных эффектов"
+        "textascii_desc": "Показывает ASCII анимацию текста",
+        "asciistopage_desc": "Останавливает текущую анимацию"
     }
 
     def __init__(self):
         self.is_running = False
-        self.animations = {}  # Словарь для хранения активных анимаций
-
-    @loader.inline_everyone
-    async def textascii_inline_handler(self, query):
-        """Inline handler для @bot текст - показывает варианты с эффектами"""
-        text = query.args
-        
-        if not text:
-            return await query.e400()
-        
-        # Список всех эффектов с описаниями
-        effects = [
-            ("fade", "Плавное появление", "⚡"),
-            ("line", "Построчное появление", "📊"),
-            ("left", "Слева направо", "➡️"),
-            ("center", "От центра к краям", "🎯"),
-            ("wave", "Волновой эффект", "🌊"),
-            ("random", "Случайные пиксели", "🎲"),
-            ("all", "Все буквы сразу", "⚡")
-        ]
-        
-        # Создаём результаты для каждого эффекта
-        results = []
-        for effect_name, effect_desc, emoji in effects:
-            results.append({
-                "title": f"{emoji} {effect_desc}",
-                "description": f"Анимация текста '{text}' с эффектом {effect_name}",
-                "message": text.upper(),
-                "thumb": "https://img.icons8.com/color/344/text.png",
-                "reply_markup": [
-                    [
-                        {
-                            "text": "🎬 Запустить анимацию",
-                            "callback": self._start_animation_inline,
-                            "args": (text.upper(), effect_name)
-                        }
-                    ],
-                    [
-                        {
-                            "text": "❌ Закрыть",
-                            "action": "close"
-                        }
-                    ]
-                ]
-            })
-        
-        return results
-
-    async def _start_animation_inline(self, call, text: str, effect: str):
-        """Запускает анимацию из inline режима"""
-        # Показываем статус
-        await call.edit(f"<code>🎬 Запуск анимации...</code>")
-        await asyncio.sleep(0.5)
-        
-        try:
-            if effect == 'all':
-                await self._animate_all_chars(call, text, 'wave')
-            else:
-                for char in text:
-                    ascii_lines = self._get_char_art(char)
-                    await self._animate_single_char(call, ascii_lines, effect)
-                    await asyncio.sleep(0.3)
-            
-            # После завершения показываем кнопки
-            await call.edit(
-                text=(
-                    f"<b>✨ Анимация завершена!</b>\n\n"
-                    f"<blockquote><b>📝 Текст:</b> {text}</blockquote>\n"
-                    f"<blockquote><b>🎨 Эффект:</b> {effect.upper()}</blockquote>\n\n"
-                    f"<i>💡 Нажмите кнопку для повтора</i>"
-                ),
-                reply_markup=[
-                    [
-                        {
-                            "text": "🔄 Перезапустить анимацию",
-                            "callback": self._start_animation_inline,
-                            "args": (text, effect)
-                        }
-                    ],
-                    [
-                        {
-                            "text": "🎨 Выбрать другой эффект",
-                            "callback": self._show_effects_menu,
-                            "args": (text,)
-                        }
-                    ],
-                    [
-                        {
-                            "text": "❌ Закрыть",
-                            "action": "close"
-                        }
-                    ]
-                ]
-            )
-        except Exception as e:
-            await call.edit(f"❌ Ошибка: {str(e)}")
-
-    async def _show_effects_menu(self, call, text: str):
-        """Показывает меню выбора эффекта"""
-        effects = [
-            ("fade", "⚡ Плавное появление"),
-            ("line", "📊 Построчное"),
-            ("left", "➡️ Слева направо"),
-            ("center", "🎯 От центра"),
-            ("wave", "🌊 Волна"),
-            ("random", "🎲 Случайно"),
-            ("all", "⚡ Все сразу")
-        ]
-        
-        buttons = []
-        for effect_name, effect_label in effects:
-            buttons.append([
-                {
-                    "text": effect_label,
-                    "callback": self._start_animation_inline,
-                    "args": (text, effect_name)
-                }
-            ])
-        
-        buttons.append([
-            {
-                "text": "❌ Закрыть",
-                "action": "close"
-            }
-        ])
-        
-        await call.edit(
-            text=(
-                f"<b>🎨 Выберите эффект анимации</b>\n\n"
-                f"<blockquote><b>📝 Текст:</b> {text}</blockquote>\n\n"
-                f"<i>Нажмите на желаемый эффект:</i>"
-            ),
-            reply_markup=buttons
-        )
 
     def _get_char_art(self, char: str) -> list:
         """Возвращает готовый арт для одной конкретной буквы из CHAR_MAP."""
@@ -455,7 +319,6 @@ class TextToASCIIMod(loader.Module):
         Форматирует ASCII-арт для корректного отображения в Telegram.
         Заменяет точки на специальные пробелы и добавляет zero-width joiner.
         """
-        # Используем неразрывный пробел (U+00A0) вместо точки для сохранения позиций
         formatted_lines = []
         for line in lines:
             # Заменяем точки на неразрывные пробелы
@@ -465,108 +328,9 @@ class TextToASCIIMod(loader.Module):
         
         return '\n'.join(formatted_lines)
 
-    def _animate_fade_in(self, lines: list, progress: float) -> list:
-        """
-        Эффект постепенного появления - заменяет символы на пустые в зависимости от прогресса.
-        progress: 0.0 - 1.0
-        """
-        result = []
-        total_chars = sum(line.count('█') for line in lines)
-        visible_chars = int(total_chars * progress)
-        
-        char_count = 0
-        for line in lines:
-            new_line = ""
-            for char in line:
-                if char == '█':
-                    char_count += 1
-                    new_line += '█' if char_count <= visible_chars else '·'
-                else:
-                    new_line += char
-            result.append(new_line)
-        return result
-
-    def _animate_line_by_line(self, lines: list, progress: float) -> list:
-        """
-        Построчное появление.
-        progress: 0.0 - 1.0
-        """
-        visible_lines = int(len(lines) * progress)
-        result = []
-        
-        for i, line in enumerate(lines):
-            if i < visible_lines:
-                # Строка полностью видима
-                result.append(line)
-            elif i == visible_lines:
-                # Частично видимая строка
-                partial_progress = (progress * len(lines)) - visible_lines
-                visible_width = int(len(line) * partial_progress)
-                new_line = ""
-                for j, char in enumerate(line):
-                    if j < visible_width:
-                        new_line += char
-                    else:
-                        new_line += '·'
-                result.append(new_line)
-            else:
-                # Строка еще не видима
-                result.append('·' * len(line))
-        
-        return result
-
-    def _animate_left_to_right(self, lines: list, progress: float) -> list:
-        """
-        Появление слева направо.
-        progress: 0.0 - 1.0
-        """
-        result = []
-        if not lines:
-            return result
-            
-        max_width = max(len(line) for line in lines)
-        visible_width = int(max_width * progress)
-        
-        for line in lines:
-            new_line = ""
-            for i, char in enumerate(line):
-                if i < visible_width:
-                    new_line += char
-                else:
-                    new_line += '·'
-            result.append(new_line)
-        
-        return result
-
-    def _animate_center_out(self, lines: list, progress: float) -> list:
-        """
-        Появление от центра к краям.
-        progress: 0.0 - 1.0
-        """
-        result = []
-        if not lines:
-            return result
-            
-        max_width = max(len(line) for line in lines)
-        center = max_width // 2
-        spread = int((max_width / 2) * progress)
-        
-        for line in lines:
-            new_line = ""
-            line_center = len(line) // 2
-            for i, char in enumerate(line):
-                distance_from_center = abs(i - line_center)
-                if distance_from_center <= spread:
-                    new_line += char
-                else:
-                    new_line += '·'
-            result.append(new_line)
-        
-        return result
-
     def _animate_wave(self, lines: list, progress: float, frame: int) -> list:
         """
-        Волновой эффект с движением - УЛУЧШЕННАЯ ВЕРСИЯ.
+        Волновой эффект с движением.
         progress: 0.0 - 1.0, frame: номер кадра для анимации
         """
         result = []
@@ -589,41 +353,10 @@ class TextToASCIIMod(loader.Module):
         
         return result
 
-    def _animate_random_dots(self, lines: list, progress: float, seed: int) -> list:
-        """
-        Случайное появление пикселей.
-        progress: 0.0 - 1.0, seed: для детерминированности
-        """
-        random.seed(seed)
-        
-        # Собираем все позиции ВСЕХ символов (не только █)
-        all_positions = []
-        for row_idx, line in enumerate(lines):
-            for col_idx, char in enumerate(line):
-                all_positions.append((row_idx, col_idx))
-        
-        # Перемешиваем все позиции
-        random.shuffle(all_positions)
-        visible_count = int(len(all_positions) * progress)
-        visible_positions = set(all_positions[:visible_count])
-        
-        # Рендерим
-        result = []
-        for row_idx, line in enumerate(lines):
-            new_line = ""
-            for col_idx, char in enumerate(line):
-                if (row_idx, col_idx) in visible_positions:
-                    new_line += char
-                else:
-                    new_line += '·'
-            result.append(new_line)
-        
-        return result
-
     async def textasciicmd(self, message):
         """Команда: .textascii <текст>
         
-        Показывает inline меню с выбором эффекта для ASCII анимации.
+        Показывает ASCII анимацию текста.
         
         Пример: .textascii привет
         """
@@ -637,153 +370,147 @@ class TextToASCIIMod(loader.Module):
             return
 
         text = args.strip().upper()
+        self.is_running = True
         
-        # Создаём inline форму с выбором эффекта
-        await self.inline.form(
-            text=(
-                f"<b>🎨 Выбери эффект для анимации</b>\n\n"
-                f"<blockquote><b>📝 Текст:</b> {text}</blockquote>\n\n"
-                f"<i>Нажми на желаемый эффект:</i>"
-            ),
+        # Создаём inline форму для анимации
+        form = await self.inline.form(
+            text="<code>🎬 Запуск анимации...</code>",
             message=message,
-            reply_markup=[
-                [
-                    {
-                        "text": "⚡ Плавное появление",
-                        "callback": self._start_animation_inline,
-                        "args": (text, "fade")
-                    }
-                ],
-                [
-                    {
-                        "text": "📊 Построчное",
-                        "callback": self._start_animation_inline,
-                        "args": (text, "line")
-                    }
-                ],
-                [
-                    {
-                        "text": "➡️ Слева направо",
-                        "callback": self._start_animation_inline,
-                        "args": (text, "left")
-                    }
-                ],
-                [
-                    {
-                        "text": "🎯 От центра",
-                        "callback": self._start_animation_inline,
-                        "args": (text, "center")
-                    }
-                ],
-                [
-                    {
-                        "text": "🌊 Волна",
-                        "callback": self._start_animation_inline,
-                        "args": (text, "wave")
-                    }
-                ],
-                [
-                    {
-                        "text": "🎲 Случайно",
-                        "callback": self._start_animation_inline,
-                        "args": (text, "random")
-                    }
-                ],
-                [
-                    {
-                        "text": "⚡ Все сразу",
-                        "callback": self._start_animation_inline,
-                        "args": (text, "all")
-                    }
-                ],
-                [
-                    {
-                        "text": "❌ Закрыть",
-                        "action": "close"
-                    }
-                ]
-            ],
+            reply_markup=[],
             force_me=False,
             silent=True
         )
-
-    async def _animate_single_char(self, msg, lines: list, effect: str):
-        """Анимирует одну букву с выбранным эффектом - 4 этапа (25%, 50%, 75%, 100%)."""
-        # Всего 4 этапа для избежания FloodWait
-        stages = [0.25, 0.5, 0.75, 1.0]
-        delay = 0.15  # Задержка между этапами
         
-        # ВАЖНО: Сначала показываем полную букву (100%), чтобы не было смещения
-        formatted_full = self._format_for_telegram(lines)
+        await asyncio.sleep(0.5)
+        
         try:
-            if hasattr(msg, 'edit'):
-                await msg.edit(f"<pre>{formatted_full}</pre>")
-        except:
-            pass
-        
-        # Теперь запускаем анимацию
-        for idx, progress in enumerate(stages):
-            if not self.is_running:
-                break
+            # Собираем все буквы
+            all_chars_lines = []
+            for char in text:
+                char_lines = self._get_char_art(char)
+                all_chars_lines.append(char_lines)
             
-            if effect == 'fade':
-                animated_lines = self._animate_fade_in(lines, progress)
-            elif effect == 'line':
-                animated_lines = self._animate_line_by_line(lines, progress)
-            elif effect == 'left':
-                animated_lines = self._animate_left_to_right(lines, progress)
-            elif effect == 'center':
-                animated_lines = self._animate_center_out(lines, progress)
-            elif effect == 'wave':
-                animated_lines = self._animate_wave(lines, progress, idx)
-            elif effect == 'random':
-                animated_lines = self._animate_random_dots(lines, progress, 42)
-            else:
-                animated_lines = lines
+            # Склеиваем построчно
+            combined_lines = []
+            for row in range(6):
+                row_parts = []
+                for char_lines in all_chars_lines:
+                    row_parts.append(char_lines[row])
+                combined_lines.append(''.join(row_parts))
             
-            formatted_art = self._format_for_telegram(animated_lines)
-            try:
-                if hasattr(msg, 'edit'):
-                    await msg.edit(f"<pre>{formatted_art}</pre>")
-                await asyncio.sleep(delay)
-            except:
-                pass
-
-    async def _animate_all_chars(self, msg, text: str, effect: str):
-        """Анимирует все буквы одновременно горизонтально - 4 этапа."""
-        # Собираем все буквы (теперь все 8×6, не нужна нормализация!)
-        all_chars_lines = []
-        
-        for char in text:
-            char_lines = self._get_char_art(char)
-            all_chars_lines.append(char_lines)
-        
-        # Склеиваем построчно БЕЗ разделителя (буквы уже выровнены)
-        combined_lines = []
-        for row in range(6):  # Все буквы строго 6 строк
-            row_parts = []
-            for char_lines in all_chars_lines:
-                row_parts.append(char_lines[row])
-            combined_lines.append(''.join(row_parts))  # Без разделителя!
-        
-        # Анимируем - только 4 этапа для избежания FloodWait
-        stages = [0.25, 0.5, 0.75, 1.0]
-        delay = 0.2  # Задержка между этапами
-        
-        for idx, progress in enumerate(stages):
-            if not self.is_running:
-                break
+            # Анимируем - 4 этапа
+            stages = [0.25, 0.5, 0.75, 1.0]
+            delay = 0.2
+            
+            for idx, progress in enumerate(stages):
+                if not self.is_running:
+                    break
+                    
+                animated_lines = self._animate_wave(combined_lines, progress, idx)
+                formatted_art = self._format_for_telegram(animated_lines)
                 
-            animated_lines = self._animate_wave(combined_lines, progress, idx)
-            formatted_art = self._format_for_telegram(animated_lines)
+                try:
+                    await form.edit(f"<pre>{formatted_art}</pre>")
+                    await asyncio.sleep(delay)
+                except:
+                    pass
             
-            try:
-                # Проверяем тип объекта (обычное сообщение или InlineCall)
-                if hasattr(msg, 'edit'):
-                    await msg.edit(f"<pre>{formatted_art}</pre>")
-                await asyncio.sleep(delay)
-            except:
-                pass
+            # После завершения показываем кнопки
+            await form.edit(
+                text=(
+                    f"<pre>{self._format_for_telegram(combined_lines)}</pre>\n\n"
+                    f"<b>✨ Анимация завершена!</b>\n\n"
+                    f"<blockquote><b>📝 Текст:</b> {text}</blockquote>\n\n"
+                    f"<i>💡 Нажмите кнопку для повтора</i>"
+                ),
+                reply_markup=[
+                    [
+                        {
+                            "text": "🔄 Перезапустить",
+                            "callback": self._restart_animation,
+                            "args": (text,)
+                        }
+                    ],
+                    [
+                        {
+                            "text": "❌ Закрыть",
+                            "action": "close"
+                        }
+                    ]
+                ]
+            )
+        except Exception as e:
+            await form.edit(f"❌ Ошибка: {str(e)}")
+        finally:
+            self.is_running = False
+
+    async def _restart_animation(self, call: InlineCall, text: str):
+        """Перезапускает анимацию"""
+        await call.edit("<code>🎬 Перезапуск анимации...</code>")
+        await asyncio.sleep(0.5)
+        
+        self.is_running = True
+        
+        try:
+            # Собираем все буквы
+            all_chars_lines = []
+            for char in text:
+                char_lines = self._get_char_art(char)
+                all_chars_lines.append(char_lines)
+            
+            # Склеиваем построчно
+            combined_lines = []
+            for row in range(6):
+                row_parts = []
+                for char_lines in all_chars_lines:
+                    row_parts.append(char_lines[row])
+                combined_lines.append(''.join(row_parts))
+            
+            # Анимируем - 4 этапа
+            stages = [0.25, 0.5, 0.75, 1.0]
+            delay = 0.2
+            
+            for idx, progress in enumerate(stages):
+                if not self.is_running:
+                    break
+                    
+                animated_lines = self._animate_wave(combined_lines, progress, idx)
+                formatted_art = self._format_for_telegram(animated_lines)
+                
+                try:
+                    await call.edit(f"<pre>{formatted_art}</pre>")
+                    await asyncio.sleep(delay)
+                except:
+                    pass
+            
+            # После завершения показываем кнопки
+            await call.edit(
+                text=(
+                    f"<pre>{self._format_for_telegram(combined_lines)}</pre>\n\n"
+                    f"<b>✨ Анимация завершена!</b>\n\n"
+                    f"<blockquote><b>📝 Текст:</b> {text}</blockquote>\n\n"
+                    f"<i>💡 Нажмите кнопку для повтора</i>"
+                ),
+                reply_markup=[
+                    [
+                        {
+                            "text": "🔄 Перезапустить",
+                            "callback": self._restart_animation,
+                            "args": (text,)
+                        }
+                    ],
+                    [
+                        {
+                            "text": "❌ Закрыть",
+                            "action": "close"
+                        }
+                    ]
+                ]
+            )
+        except Exception as e:
+            await call.edit(f"❌ Ошибка: {str(e)}")
+        finally:
+            self.is_running = False
 
     async def asciistopagecmd(self, message):
         """Команда: .asciistopage
@@ -795,64 +522,3 @@ class TextToASCIIMod(loader.Module):
             await utils.answer(message, "⏹ Анимация остановлена.")
         else:
             await utils.answer(message, "ℹ️ Анимация не запущена.")
-
-    async def asciieffectscmd(self, message):
-        """Команда: .asciieffects
-        
-        Показывает список всех доступных эффектов анимации.
-        """
-        effects_info = (
-            "<b>🎨 Доступные эффекты анимации:</b>\n\n"
-            
-            "<b>1️⃣ fade</b> - Плавное появление\n"
-            "   • Пиксели появляются постепенно\n"
-            "   • Спокойный, профессиональный эффект\n"
-            "   • <code>.textascii привет fade</code>\n\n"
-            
-            "<b>2️⃣ line</b> - Построчное появление\n"
-            "   • Буква появляется сверху вниз\n"
-            "   • Методичное, последовательное\n"
-            "   • <code>.textascii текст line</code>\n\n"
-            
-            "<b>3️⃣ left</b> - Слева направо\n"
-            "   • Буква \"набегает\" как печать\n"
-            "   • Динамичное, быстрое\n"
-            "   • <code>.textascii старт left</code>\n\n"
-            
-            "<b>4️⃣ center</b> - От центра к краям\n"
-            "   • Буква разворачивается из центра\n"
-            "   • Элегантное, сбалансированное\n"
-            "   • <code>.textascii лого center</code>\n\n"
-            
-            "<b>5️⃣ wave</b> - Волновой эффект 🌊\n"
-            "   • Волна течёт по буквам\n"
-            "   • Живое, энергичное\n"
-            "   • <code>.textascii волна wave</code>\n"
-            "   • ⭐ <i>Рекомендуется!</i>\n\n"
-            
-            "<b>6️⃣ random</b> - Случайные пиксели 🎲\n"
-            "   • Пиксели появляются хаотично\n"
-            "   • Эффектное, wow-эффект\n"
-            "   • <code>.textascii магия random</code>\n"
-            "   • ⭐ <i>Рекомендуется!</i>\n\n"
-            
-            "<b>7️⃣ all</b> - Все буквы сразу\n"
-            "   • Показывает весь текст с wave\n"
-            "   • Быстрее для длинных слов\n"
-            "   • <code>.textascii слово all</code>\n\n"
-            
-            "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-            
-            "<b>💡 Советы:</b>\n"
-            "• Эффект можно не указывать (будет fade)\n"
-            "• Для показа всех букв сразу используйте эффект <code>all</code>\n"
-            "• wave и random - самые зрелищные!\n\n"
-            
-            "<b>📝 Примеры команд:</b>\n"
-            "<code>.textascii привет</code> - с эффектом по умолчанию\n"
-            "<code>.textascii привет wave</code> - с волной\n"
-            "<code>.textascii круто random</code> - случайные пиксели\n"
-            "<code>.textascii слово all</code> - все буквы сразу"
-        )
-        
-        await utils.answer(message, effects_info)
