@@ -1,8 +1,8 @@
 # ---------------------------------------------------------------------------------
 # Name: TextToASCII
-# Description: Inline ASCII анимации. Используй: @bot текст (Telegram оптимизировано).
+# Description: ASCII анимации. Команда: .textascii <текст> | Inline: @bot текст
 # Author: @cursedonluck (улучшено для Telegram)
-# Version: 3.0.0
+# Version: 3.2.0
 # ---------------------------------------------------------------------------------
 
 from .. import loader, utils
@@ -293,10 +293,10 @@ CHAR_MAP = {
 
 @loader.tds
 class TextToASCIIMod(loader.Module):
-    """Крупные ASCII буквы с анимацией. Используй: @hergoku_bot текст"""
+    """ASCII анимации. Команда: .textascii <текст> или inline: @bot текст"""
     strings = {
         "name": "TextToASCII",
-        "textascii_desc": "Показывает крупные ASCII буквы с анимацией (или используй inline: @bot текст)",
+        "textascii_desc": "Показывает меню выбора эффекта для ASCII анимации",
         "asciistopage_desc": "Останавливает текущую анимацию",
         "asciieffects_desc": "Показывает список всех доступных эффектов"
     }
@@ -620,33 +620,90 @@ class TextToASCIIMod(loader.Module):
         return result
 
     async def textasciicmd(self, message):
-        """Команда: .textascii
+        """Команда: .textascii <текст>
         
-        Показывает крупные ASCII буквы с анимацией через inline режим.
+        Показывает inline меню с выбором эффекта для ASCII анимации.
         
-        Использование:
-        1. Напиши в любом чате: @hergoku_bot твой_текст
-        2. Выбери эффект из списка
-        3. Отправь результат
+        Пример: .textascii привет
         """
-        bot_username = (await self.inline.bot.get_me()).username
+        args = utils.get_args_raw(message)
+        if not args:
+            await utils.answer(message, 
+                "❌ Укажи текст!\n\n"
+                "<b>Пример:</b>\n"
+                "<code>.textascii привет</code>"
+            )
+            return
+
+        text = args.strip().upper()
         
-        await utils.answer(message, 
-            f"<b>🎨 TextToASCII - Inline режим</b>\n\n"
-            f"<b>Как использовать:</b>\n"
-            f"1️⃣ Напиши в любом чате:\n"
-            f"<code>@{bot_username} твой_текст</code>\n\n"
-            f"2️⃣ Выбери эффект из списка\n"
-            f"3️⃣ Отправь результат\n\n"
-            f"<b>📋 Доступные эффекты:</b>\n"
-            f"⚡ Плавное появление (fade)\n"
-            f"📊 Построчное (line)\n"
-            f"➡️ Слева направо (left)\n"
-            f"🎯 От центра (center)\n"
-            f"🌊 Волна (wave)\n"
-            f"🎲 Случайно (random)\n"
-            f"⚡ Все сразу (all)\n\n"
-            f"<i>💡 Попробуй прямо сейчас!</i>"
+        # Создаём inline форму с выбором эффекта
+        await self.inline.form(
+            text=(
+                f"<b>🎨 Выбери эффект для анимации</b>\n\n"
+                f"<blockquote><b>📝 Текст:</b> {text}</blockquote>\n\n"
+                f"<i>Нажми на желаемый эффект:</i>"
+            ),
+            message=message,
+            reply_markup=[
+                [
+                    {
+                        "text": "⚡ Плавное появление",
+                        "callback": self._start_animation_inline,
+                        "args": (text, "fade")
+                    }
+                ],
+                [
+                    {
+                        "text": "📊 Построчное",
+                        "callback": self._start_animation_inline,
+                        "args": (text, "line")
+                    }
+                ],
+                [
+                    {
+                        "text": "➡️ Слева направо",
+                        "callback": self._start_animation_inline,
+                        "args": (text, "left")
+                    }
+                ],
+                [
+                    {
+                        "text": "🎯 От центра",
+                        "callback": self._start_animation_inline,
+                        "args": (text, "center")
+                    }
+                ],
+                [
+                    {
+                        "text": "🌊 Волна",
+                        "callback": self._start_animation_inline,
+                        "args": (text, "wave")
+                    }
+                ],
+                [
+                    {
+                        "text": "🎲 Случайно",
+                        "callback": self._start_animation_inline,
+                        "args": (text, "random")
+                    }
+                ],
+                [
+                    {
+                        "text": "⚡ Все сразу",
+                        "callback": self._start_animation_inline,
+                        "args": (text, "all")
+                    }
+                ],
+                [
+                    {
+                        "text": "❌ Закрыть",
+                        "action": "close"
+                    }
+                ]
+            ],
+            force_me=False,
+            silent=True
         )
 
     async def _animate_single_char(self, msg, lines: list, effect: str):
