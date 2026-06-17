@@ -1,0 +1,60 @@
+# ---------------------------------------------------------------------------------
+# Name: ASCIIAnimation
+# Description: Анимированный ASCII-текст в сообщениях.
+# Author: Knight
+# ---------------------------------------------------------------------------------
+
+from .. import loader, utils
+import pyfiglet
+import asyncio
+
+@loader.tds
+class ASCIIAnimationMod(loader.Module):
+    """Модуль для создания анимированного ASCII-текста."""
+    strings = {"name": "ASCIIAnimation"}
+
+    def __init__(self):
+        self.is_running = False
+
+    async def textasciicmd(self, message):
+        """Команда: .textascii <текст>"""
+        if self.is_running:
+            await utils.answer(message, "<b>[!]</b> Анимация уже запущена!")
+            return
+
+        args = utils.get_args_raw(message)
+        if not args:
+            await utils.answer(message, "<b>[!]</b> Укажи текст для анимации.")
+            return
+
+        self.is_running = True
+        
+        # Генерируем каждую букву отдельно
+        chars = [pyfiglet.figlet_format(char, font="small") for char in args]
+        
+        msg = await utils.answer(message, "<b>[ASCII]</b> Старт...")
+        
+        try:
+            for char_art in chars:
+                await msg.edit(f"<code>{char_art}</code>")
+                await asyncio.sleep(0.8) # Скорость смены букв
+            
+            # Добавляем кнопку после завершения
+            await msg.edit(
+                text=f"<code>{chars[-1]}</code>",
+                reply_markup=[
+                    {"text": "🔄 Повторить", "callback": self.callback_restart, "args": (args,)}
+                ]
+            )
+        finally:
+            self.is_running = False
+
+    async def callback_restart(self, call, text):
+        """Обработчик кнопки повтора."""
+        if self.is_running:
+            await call.answer("Анимация уже идет!", show_alert=True)
+            return
+        
+        # Перезапускаем анимацию в том же сообщении
+        await self.textasciicmd(call.message)
+
