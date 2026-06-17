@@ -2,7 +2,7 @@
 # Name: TextToASCII
 # Description: Пиши символами такими большими гигантики хихи (Telegram оптимизировано).
 # Author: @cursedonluck (улучшено для Telegram)
-# Version: 2.2.0
+# Version: 2.3.0
 # ---------------------------------------------------------------------------------
 
 from .. import loader, utils
@@ -306,12 +306,6 @@ class TextToASCIIMod(loader.Module):
 
     async def _restart_animation(self, call: InlineCall, text: str, effect: str):
         """Обработчик кнопки 'Перезапустить анимацию'"""
-        if self.is_running:
-            await call.answer("⚠️ Анимация уже запущена!", show_alert=True)
-            return
-        
-        self.is_running = True
-        
         # Показываем статус
         await call.edit("<code>🔄 Перезапуск анимации...</code>")
         await asyncio.sleep(0.5)
@@ -323,17 +317,21 @@ class TextToASCIIMod(loader.Module):
             else:
                 # По одной букве
                 for char in text:
-                    if not self.is_running:
-                        break
                     ascii_lines = self._get_char_art(char)
                     await self._animate_single_char(call, ascii_lines, effect)
                     await asyncio.sleep(0.3)
             
+            # Создаем разделительную линию и обычный текст
+            separator = "─" * 50
+            
             # После завершения показываем форму с кнопкой снова
             await self.inline.form(
                 text=(
-                    f"<b>✨ Анимация завершена!</b>\n"
-                    f"<i>Текст: {text} | Эффект: {effect.upper()}</i>\n\n"
+                    f"<b>✨ Анимация завершена!</b>\n\n"
+                    f"{separator}\n"
+                    f"<b>{text}</b>\n"
+                    f"{separator}\n\n"
+                    f"<i>Эффект: {effect.upper()}</i>\n"
                     f"💡 <i>Нажмите кнопку для повтора</i>"
                 ),
                 message=call.form["chat"],
@@ -357,8 +355,6 @@ class TextToASCIIMod(loader.Module):
             )
         except Exception as e:
             await call.edit(f"❌ Ошибка: {str(e)}")
-        finally:
-            self.is_running = False
 
     def _get_char_art(self, char: str) -> list:
         """Возвращает готовый арт для одной конкретной буквы из CHAR_MAP."""
@@ -587,11 +583,17 @@ class TextToASCIIMod(loader.Module):
                     await self._animate_single_char(msg, ascii_lines, effect)
                     await asyncio.sleep(0.3)
             
+            # Создаем разделительную линию и обычный текст
+            separator = "─" * 50
+            
             # После завершения показываем форму с кнопкой для перезапуска
             await self.inline.form(
                 text=(
-                    f"<b>✨ Анимация завершена!</b>\n"
-                    f"<i>Текст: {text} | Эффект: {effect.upper()}</i>\n\n"
+                    f"<b>✨ Анимация завершена!</b>\n\n"
+                    f"{separator}\n"
+                    f"<b>{text}</b>\n"
+                    f"{separator}\n\n"
+                    f"<i>Эффект: {effect.upper()}</i>\n"
                     f"💡 <i>Нажмите кнопку для повтора</i>"
                 ),
                 message=msg,
