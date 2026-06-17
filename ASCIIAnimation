@@ -1,12 +1,13 @@
 # ---------------------------------------------------------------------------------
 # Name: ASCIIAnimation
-# Description: Анимированный ASCII-текст в сообщениях.
+# Description: Анимированный ASCII-текст с использованием шрифта 'small'.
 # Author: Knight
 # ---------------------------------------------------------------------------------
 
 from .. import loader, utils
 import pyfiglet
 import asyncio
+import html
 
 @loader.tds
 class ASCIIAnimationMod(loader.Module):
@@ -19,42 +20,46 @@ class ASCIIAnimationMod(loader.Module):
     async def textasciicmd(self, message):
         """Команда: .textascii <текст>"""
         if self.is_running:
-            await utils.answer(message, "<b>[!]</b> Анимация уже запущена!")
+            await utils.answer(message, "<b>[!]</b> Анимация уже запущена, подожди окончания.")
             return
 
         args = utils.get_args_raw(message)
         if not args:
-            await utils.answer(message, "<b>[!]</b> Укажи текст для анимации.")
+            await utils.answer(message, "<b>[!]</b> Укажи текст. Пример: .textascii Привет")
             return
 
         self.is_running = True
         
-        # Генерируем каждую букву отдельно
+        # Генерируем каждую букву отдельно шрифтом 'small'
         chars = [pyfiglet.figlet_format(char, font="small") for char in args]
         
-        msg = await utils.answer(message, "<b>[ASCII]</b> Старт...")
+        msg = await utils.answer(message, "<b>[ASCII]</b> Инициализация...")
         
         try:
             for char_art in chars:
-                await msg.edit(f"<code>{char_art}</code>")
-                await asyncio.sleep(0.8) # Скорость смены букв
+                # Экранируем спецсимволы HTML (<, >, &)
+                safe_art = html.escape(char_art)
+                await msg.edit(f"<code>{safe_art}</code>")
+                await asyncio.sleep(0.7) # Оптимальная скорость для Telegram API
             
-            # Добавляем кнопку после завершения
+            # Финальное сообщение с кнопкой
+            final_art = html.escape(chars[-1])
             await msg.edit(
-                text=f"<code>{chars[-1]}</code>",
+                text=f"<code>{final_art}</code>",
                 reply_markup=[
                     {"text": "🔄 Повторить", "callback": self.callback_restart, "args": (args,)}
                 ]
             )
+        except Exception as e:
+            await utils.answer(message, f"<b>[Ошибка]:</b> {str(e)}")
         finally:
             self.is_running = False
 
     async def callback_restart(self, call, text):
         """Обработчик кнопки повтора."""
         if self.is_running:
-            await call.answer("Анимация уже идет!", show_alert=True)
+            await call.answer("Анимация еще не завершена!", show_alert=True)
             return
         
         # Перезапускаем анимацию в том же сообщении
         await self.textasciicmd(call.message)
-
