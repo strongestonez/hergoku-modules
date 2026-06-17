@@ -336,7 +336,7 @@ class TextToASCIIMod(loader.Module):
 
     @loader.inline_everyone
     async def textascii_inline_handler(self, query):
-        """Inline handler для @bot текст"""
+        """Обычный текст в ASCII art."""
         text = query.args
         
         if not text:
@@ -347,7 +347,7 @@ class TextToASCIIMod(loader.Module):
                 "title": f"🎬 {text}",
                 "description": "Запустить ASCII анимацию",
                 "message": f"<code>Запуск анимации для: {text}</code>",
-                "thumb": "https://img.icons8.com/color/344/text.png",
+                "thumb": "https://raw.githubusercontent.com/strongestonez/hergoku-modules/refs/heads/main/TextToASCII_Avatar.svg",
                 "reply_markup": [
                     [
                         {
