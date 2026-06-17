@@ -336,7 +336,7 @@ class TextToASCIIMod(loader.Module):
 
     @loader.inline_everyone
     async def textascii_inline_handler(self, query):
-        """Обычный текст в ASCII art."""
+        """Обычные буквы в ASCII буквы."""
         text = query.args
         
         if not text:
@@ -365,8 +365,6 @@ class TextToASCIIMod(loader.Module):
         self.is_running = True
         
         try:
-            result_lines = [""] * 6
-            
             for char in text:
                 if not self.is_running:
                     break
@@ -381,26 +379,19 @@ class TextToASCIIMod(loader.Module):
                         break
                     
                     animated_char = self._animate_wave(char_lines, progress, idx)
-                    
-                    temp_lines = []
-                    for row in range(6):
-                        temp_lines.append(result_lines[row] + animated_char[row])
-                    
-                    formatted_art = self._format_for_telegram(temp_lines)
+                    formatted_art = self._format_for_telegram(animated_char)
                     
                     try:
                         await call.edit(f"<pre>{formatted_art}</pre>")
                         await asyncio.sleep(delay)
                     except:
                         pass
-                
-                for row in range(6):
-                    result_lines[row] = result_lines[row] + char_lines[row]
-            
-            final_text = self._format_for_telegram(result_lines)
             
             await call.edit(
-                text=f"<pre>{final_text}</pre>\n\n<b>✨ Готово!</b>",
+                text=(
+                    f"<b>-♦-</b>            <code>{text}</code>          <b>-♦-</b>\n\n"
+                    f"<b>♦ Хочешь снова? Жми ниже. ♦</b>"
+                ),
                 reply_markup=[
                     [
                         {
@@ -434,9 +425,9 @@ class TextToASCIIMod(loader.Module):
             message,
             f"<b>📝 TextToASCII - Инструкция по использованию</b>\n\n"
             f"<b>🎬 Для создания ASCII анимации используйте inline режим:</b>\n\n"
-            f"<code>@ВашБот textoascii текст</code>\n\n"
+            f"<code>@{bot_username} textoascii текст</code>\n\n"
             f"<b>Пример:</b>\n"
-            f"<code>@ВашБот textoascii привет</code>\n\n"
+            f"<code>@{bot_username} textoascii привет</code>\n\n"
             f"<i>💡 После отправки нажмите на кнопку \"🎬 Запустить анимацию\"</i>\n\n"
             f"<blockquote>⚡ Для активации inline mode вам нужно перейти в BotFather -> /mybots -> Bot Settings -> Inline Mode -> Включить \n"
         )
