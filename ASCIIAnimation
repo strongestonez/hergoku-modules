@@ -52,8 +52,11 @@ class StaticASCIIMod(loader.Module):
             return
 
         self.is_running = True
-        msg = await utils.answer(message, "```\n...\n
-```")
+        
+        # FIX: Changed standard quotes to triple quotes for multi-line support
+        msg = await utils.answer(message, """```
+...
+```""")
         
         try:
             for char in args:
