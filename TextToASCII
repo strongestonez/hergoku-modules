@@ -335,99 +335,32 @@ class TextToASCIIMod(loader.Module):
         
         return result
 
-    async def textasciicmd(self, message):
-        """Команда: .textascii <текст>
+    @loader.inline_everyone
+    async def textascii_inline_handler(self, query):
+        """Inline handler для @bot текст"""
+        text = query.args
         
-        Показывает ASCII анимацию текста.
+        if not text:
+            return {
+                "title": "TextToASCII",
+                "description": "Введите текст для анимации",
+                "message": "Использование: @bot текст"
+            }
         
-        Пример: .textascii привет
-        """
-        args = utils.get_args_raw(message)
-        if not args:
-            await utils.answer(message, 
-                "❌ Укажи текст!\n\n"
-                "<b>Пример:</b>\n"
-                "<code>.textascii привет</code>"
-            )
-            return
+        return {
+            "title": f"🎬 {text}",
+            "description": "Нажмите для запуска ASCII анимации",
+            "message": text.upper(),
+            "thumb": "https://img.icons8.com/color/344/text.png",
+            "reply_markup": {
+                "text": "🎬 Запустить анимацию",
+                "callback": self._start_inline_animation,
+                "args": (text.upper(),)
+            }
+        }
 
-        text = args.strip().upper()
-        self.is_running = True
-        
-        form = await self.inline.form(
-            text="<code>🎬 Запуск...</code>",
-            message=message,
-            reply_markup=[],
-            force_me=False,
-            silent=True
-        )
-        
-        try:
-            result_lines = [""] * 6
-            
-            for char in text:
-                if not self.is_running:
-                    break
-                    
-                char_lines = self._get_char_art(char)
-                
-                stages = [0.25, 0.5, 0.75, 1.0]
-                delay = 0.15
-                
-                for idx, progress in enumerate(stages):
-                    if not self.is_running:
-                        break
-                    
-                    animated_char = self._animate_wave(char_lines, progress, idx)
-                    
-                    temp_lines = []
-                    for row in range(6):
-                        temp_lines.append(result_lines[row] + animated_char[row])
-                    
-                    formatted_art = self._format_for_telegram(temp_lines)
-                    
-                    try:
-                        await form.edit(f"<pre>{formatted_art}</pre>")
-                        await asyncio.sleep(delay)
-                    except:
-                        pass
-                
-                for row in range(6):
-                    result_lines[row] = result_lines[row] + char_lines[row]
-            
-            final_text = self._format_for_telegram(result_lines)
-            
-            await form.edit(
-                text=(
-                    f"<pre>{final_text}</pre>\n\n"
-                    f"<b>✨ Анимация завершена!</b>\n\n"
-                    f"<blockquote><b>📝 Текст:</b> {text}</blockquote>\n\n"
-                    f"<i>💡 Нажмите кнопку для повтора</i>"
-                ),
-                reply_markup=[
-                    [
-                        {
-                            "text": "🔄 Перезапустить",
-                            "callback": self._restart_animation,
-                            "args": (text,)
-                        }
-                    ],
-                    [
-                        {
-                            "text": "❌ Закрыть",
-                            "action": "close"
-                        }
-                    ]
-                ]
-            )
-        except Exception as e:
-            await form.edit(f"❌ Ошибка: {str(e)}")
-        finally:
-            self.is_running = False
-
-    async def _restart_animation(self, call: InlineCall, text: str):
-        await call.edit("<code>🎬 Перезапуск...</code>")
-        
+    async def _start_inline_animation(self, call: InlineCall, text: str):
+        """Запускает анимацию из inline режима"""
         self.is_running = True
         
         try:
@@ -466,17 +399,12 @@ class TextToASCIIMod(loader.Module):
             final_text = self._format_for_telegram(result_lines)
             
             await call.edit(
-                text=(
-                    f"<pre>{final_text}</pre>\n\n"
-                    f"<b>✨ Анимация завершена!</b>\n\n"
-                    f"<blockquote><b>📝 Текст:</b> {text}</blockquote>\n\n"
-                    f"<i>💡 Нажмите кнопку для повтора</i>"
-                ),
+                text=f"<pre>{final_text}</pre>\n\n<b>✨ Готово!</b>",
                 reply_markup=[
                     [
                         {
-                            "text": "🔄 Перезапустить",
-                            "callback": self._restart_animation,
+                            "text": "🔄 Повторить",
+                            "callback": self._start_inline_animation,
                             "args": (text,)
                         }
                     ],
@@ -490,6 +418,72 @@ class TextToASCIIMod(loader.Module):
             )
         except Exception as e:
             await call.edit(f"❌ Ошибка: {str(e)}")
+        finally:
+            self.is_running = False
+
+    async def textasciicmd(self, message):
+        """Команда: .textascii <текст>
+        
+        Показывает ASCII анимацию текста.
+        
+        Пример: .textascii привет
+        """
+        args = utils.get_args_raw(message)
+        if not args:
+            await utils.answer(message, 
+                "❌ Укажи текст!\n\n"
+                "<b>Пример:</b>\n"
+                "<code>.textascii привет</code>"
+            )
+            return
+
+        text = args.strip().upper()
+        self.is_running = True
+        
+        msg = await utils.answer(message, "<code>🎬 Запуск...</code>")
+        
+        try:
+            result_lines = [""] * 6
+            
+            for char in text:
+                if not self.is_running:
+                    break
+                    
+                char_lines = self._get_char_art(char)
+                
+                stages = [0.25, 0.5, 0.75, 1.0]
+                delay = 0.15
+                
+                for idx, progress in enumerate(stages):
+                    if not self.is_running:
+                        break
+                    
+                    animated_char = self._animate_wave(char_lines, progress, idx)
+                    
+                    temp_lines = []
+                    for row in range(6):
+                        temp_lines.append(result_lines[row] + animated_char[row])
+                    
+                    formatted_art = self._format_for_telegram(temp_lines)
+                    
+                    try:
+                        await msg.edit(f"<pre>{formatted_art}</pre>")
+                        await asyncio.sleep(delay)
+                    except:
+                        pass
+                
+                for row in range(6):
+                    result_lines[row] = result_lines[row] + char_lines[row]
+            
+            final_text = self._format_for_telegram(result_lines)
+            
+            await msg.edit(
+                f"<pre>{final_text}</pre>\n\n"
+                f"<b>✨ Анимация завершена!</b>\n\n"
+                f"<blockquote><b>📝 Текст:</b> {text}</blockquote>"
+            )
+        except Exception as e:
+            await msg.edit(f"❌ Ошибка: {str(e)}")
         finally:
             self.is_running = False
 
