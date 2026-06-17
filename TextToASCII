@@ -2,7 +2,7 @@
 # Name: TextToASCII
 # Description: Пиши символами такими большими гигантики хихи (Telegram оптимизировано).
 # Author: @cursedonluck (улучшено для Telegram)
-# Version: 2.3.0
+# Version: 2.5.0
 # ---------------------------------------------------------------------------------
 
 from .. import loader, utils
@@ -306,7 +306,7 @@ class TextToASCIIMod(loader.Module):
 
     async def _restart_animation(self, call: InlineCall, text: str, effect: str):
         """Обработчик кнопки 'Перезапустить анимацию'"""
-        # Показываем статус
+        # Показываем статус на ТОМ ЖЕ сообщении
         await call.edit("<code>🔄 Перезапуск анимации...</code>")
         await asyncio.sleep(0.5)
         
@@ -321,20 +321,14 @@ class TextToASCIIMod(loader.Module):
                     await self._animate_single_char(call, ascii_lines, effect)
                     await asyncio.sleep(0.3)
             
-            # Создаем разделительную линию и обычный текст
-            separator = "─" * 50
-            
-            # После завершения показываем форму с кнопкой снова
-            await self.inline.form(
+            # После завершения показываем форму с кнопкой снова НА ТОМ ЖЕ сообщении
+            await call.edit(
                 text=(
                     f"<b>✨ Анимация завершена!</b>\n\n"
-                    f"{separator}\n"
-                    f"<b>{text}</b>\n"
-                    f"{separator}\n\n"
-                    f"<i>Эффект: {effect.upper()}</i>\n"
-                    f"💡 <i>Нажмите кнопку для повтора</i>"
+                    f"<blockquote><b>📝 Текст:</b> {text.upper()}</blockquote>\n"
+                    f"<blockquote><b>🎨 Эффект:</b> {effect.upper()}</blockquote>\n\n"
+                    f"<i>💡 Нажмите кнопку ниже для повтора анимации</i>"
                 ),
-                message=call.form["chat"],
                 reply_markup=[
                     [
                         {
@@ -349,9 +343,7 @@ class TextToASCIIMod(loader.Module):
                             "action": "close"
                         }
                     ]
-                ],
-                force_me=False,
-                silent=True
+                ]
             )
         except Exception as e:
             await call.edit(f"❌ Ошибка: {str(e)}")
@@ -583,18 +575,14 @@ class TextToASCIIMod(loader.Module):
                     await self._animate_single_char(msg, ascii_lines, effect)
                     await asyncio.sleep(0.3)
             
-            # Создаем разделительную линию и обычный текст
-            separator = "─" * 50
-            
-            # После завершения показываем форму с кнопкой для перезапуска
-            await self.inline.form(
+            # После завершения редактируем ТО ЖЕ сообщение и добавляем кнопки через inline
+            # Используем inline.form с параметром message=msg для редактирования существующего сообщения
+            inline_msg = await self.inline.form(
                 text=(
                     f"<b>✨ Анимация завершена!</b>\n\n"
-                    f"{separator}\n"
-                    f"<b>{text}</b>\n"
-                    f"{separator}\n\n"
-                    f"<i>Эффект: {effect.upper()}</i>\n"
-                    f"💡 <i>Нажмите кнопку для повтора</i>"
+                    f"<blockquote><b>📝 Текст:</b> {text.upper()}</blockquote>\n"
+                    f"<blockquote><b>🎨 Эффект:</b> {effect.upper()}</blockquote>\n\n"
+                    f"<i>💡 Нажмите кнопку ниже для повтора анимации</i>"
                 ),
                 message=msg,
                 reply_markup=[
@@ -627,6 +615,15 @@ class TextToASCIIMod(loader.Module):
         stages = [0.25, 0.5, 0.75, 1.0]
         delay = 0.15  # Задержка между этапами
         
+        # ВАЖНО: Сначала показываем полную букву (100%), чтобы не было смещения
+        formatted_full = self._format_for_telegram(lines)
+        try:
+            if hasattr(msg, 'edit'):
+                await msg.edit(f"<pre>{formatted_full}</pre>")
+        except:
+            pass
+        
+        # Теперь запускаем анимацию
         for idx, progress in enumerate(stages):
             if not self.is_running:
                 break
@@ -648,9 +645,7 @@ class TextToASCIIMod(loader.Module):
             
             formatted_art = self._format_for_telegram(animated_lines)
             try:
-                # Проверяем тип объекта (обычное сообщение или InlineCall)
                 if hasattr(msg, 'edit'):
-                    # Обычное сообщение или InlineCall - оба имеют .edit()
                     await msg.edit(f"<pre>{formatted_art}</pre>")
                 await asyncio.sleep(delay)
             except:
