@@ -291,8 +291,8 @@ CHAR_MAP = {
 
 @loader.tds
 class StepByStepASCIIMod(loader.Module):
-    """Модуль посимвольной демонстрации крупного ASCII-арта для Telegram."""
-    strings = {"name": "StepByStepASCII"}
+    """Крупные ASCII буквы с анимацией. Используй: .textascii <текст>"""
+    strings = {"name": "ASCIIAnimation"}
 
     def __init__(self):
         self.is_running = False
@@ -525,21 +525,12 @@ class StepByStepASCIIMod(loader.Module):
         return result
 
     async def textasciicmd(self, message):
-        """Команда: .textascii <текст> <эффект> (Показывает буквы с анимацией)
+        """Команда: .textascii <текст> [эффект]
         
-        Эффекты:
-        • fade - постепенное появление (по умолчанию)
-        • line - построчное появление
-        • left - слева направо
-        • center - от центра к краям
-        • wave - волновой эффект
-        • random - случайные пиксели
-        • all - все буквы сразу с анимацией
+        Показывает крупные ASCII буквы с анимацией.
         
-        Примеры: 
-        .textascii привет
-        .textascii привет wave
-        .textascii hello fade
+        Эффекты: fade, line, left, center, wave, random, all
+        Пример: .textascii привет wave
         """
         if self.is_running:
             await utils.answer(message, "⚠️ Анимация уже запущена! Дождитесь завершения.")
@@ -669,10 +660,11 @@ class StepByStepASCIIMod(loader.Module):
                 pass
 
     async def asciiallcmd(self, message):
-        """Команда: .asciiall <текст> <эффект> (Все буквы сразу с анимацией)
+        """Команда: .asciiall <текст> [эффект]
+        
+        Показывает все буквы сразу с анимацией.
         
         Эффекты: fade, line, left, center, wave, random
-        
         Пример: .asciiall привет wave
         """
         if self.is_running:
@@ -765,9 +757,72 @@ class StepByStepASCIIMod(loader.Module):
             self.is_running = False
 
     async def asciistopagecmd(self, message):
-        """Команда: .asciistopage (Останавливает текущую анимацию)"""
+        """Команда: .asciistopage
+        
+        Останавливает текущую анимацию.
+        """
         if self.is_running:
             self.is_running = False
             await utils.answer(message, "⏹ Анимация остановлена.")
         else:
             await utils.answer(message, "ℹ️ Анимация не запущена.")
+
+    async def asciieffectscmd(self, message):
+        """Команда: .asciieffects
+        
+        Показывает список всех доступных эффектов анимации.
+        """
+        effects_info = (
+            "<b>🎨 Доступные эффекты анимации:</b>\n\n"
+            
+            "<b>1️⃣ fade</b> - Плавное появление\n"
+            "   • Пиксели появляются постепенно\n"
+            "   • Спокойный, профессиональный эффект\n"
+            "   • <code>.textascii привет fade</code>\n\n"
+            
+            "<b>2️⃣ line</b> - Построчное появление\n"
+            "   • Буква появляется сверху вниз\n"
+            "   • Методичное, последовательное\n"
+            "   • <code>.textascii текст line</code>\n\n"
+            
+            "<b>3️⃣ left</b> - Слева направо\n"
+            "   • Буква \"набегает\" как печать\n"
+            "   • Динамичное, быстрое\n"
+            "   • <code>.textascii старт left</code>\n\n"
+            
+            "<b>4️⃣ center</b> - От центра к краям\n"
+            "   • Буква разворачивается из центра\n"
+            "   • Элегантное, сбалансированное\n"
+            "   • <code>.textascii лого center</code>\n\n"
+            
+            "<b>5️⃣ wave</b> - Волновой эффект 🌊\n"
+            "   • Волна течёт по буквам\n"
+            "   • Живое, энергичное\n"
+            "   • <code>.textascii волна wave</code>\n"
+            "   • ⭐ <i>Рекомендуется!</i>\n\n"
+            
+            "<b>6️⃣ random</b> - Случайные пиксели 🎲\n"
+            "   • Пиксели появляются хаотично\n"
+            "   • Эффектное, wow-эффект\n"
+            "   • <code>.textascii магия random</code>\n"
+            "   • ⭐ <i>Рекомендуется!</i>\n\n"
+            
+            "<b>7️⃣ all</b> - Все буквы сразу\n"
+            "   • Показывает весь текст с wave\n"
+            "   • Быстрее для длинных слов\n"
+            "   • <code>.textascii слово all</code>\n\n"
+            
+            "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            
+            "<b>💡 Советы:</b>\n"
+            "• Эффект можно не указывать (будет fade)\n"
+            "• Для быстрого показа используйте <code>.asciiall</code>\n"
+            "• wave и random - самые зрелищные!\n\n"
+            
+            "<b>📝 Примеры команд:</b>\n"
+            "<code>.textascii привет</code> - с эффектом по умолчанию\n"
+            "<code>.textascii привет wave</code> - с волной\n"
+            "<code>.asciiall круто random</code> - все буквы сразу"
+        )
+        
+        await utils.answer(message, effects_info)
