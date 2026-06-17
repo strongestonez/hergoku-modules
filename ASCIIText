@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------------
-# Name: TextToASCII
-# Description: Пиши символами такими с эффектиками так ещё они и гигантики хихи
-# Author: @cursedonluck
+# Name: ASCIIAnimation
+# Description: Пиши символами такими большими гигантики хихи (Telegram оптимизировано).
+# Author: @cursedonluck (улучшено для Telegram)
 # ---------------------------------------------------------------------------------
 
 from .. import loader, utils
@@ -292,7 +292,13 @@ CHAR_MAP = {
 @loader.tds
 class StepByStepASCIIMod(loader.Module):
     """Крупные ASCII буквы с анимацией. Используй: .textascii <текст>"""
-    strings = {"name": "ASCIIAnimation"}
+    strings = {
+        "name": "ASCIIAnimation",
+        "textascii_desc": "Показывает крупные ASCII буквы с анимацией по одной",
+        "asciiall_desc": "Показывает все буквы сразу с анимацией",
+        "asciistopage_desc": "Останавливает текущую анимацию",
+        "asciieffects_desc": "Показывает список всех доступных эффектов"
+    }
 
     def __init__(self):
         self.is_running = False
@@ -406,21 +412,26 @@ class StepByStepASCIIMod(loader.Module):
         """
         visible_lines = int(len(lines) * progress)
         result = []
+        
         for i, line in enumerate(lines):
             if i < visible_lines:
+                # Строка полностью видима
                 result.append(line)
             elif i == visible_lines:
                 # Частично видимая строка
                 partial_progress = (progress * len(lines)) - visible_lines
+                visible_width = int(len(line) * partial_progress)
                 new_line = ""
                 for j, char in enumerate(line):
-                    if j < len(line) * partial_progress:
+                    if j < visible_width:
                         new_line += char
                     else:
-                        new_line += '·' if char == '█' else char
+                        new_line += '·'
                 result.append(new_line)
             else:
+                # Строка еще не видима
                 result.append('·' * len(line))
+        
         return result
 
     def _animate_left_to_right(self, lines: list, progress: float) -> list:
@@ -429,6 +440,9 @@ class StepByStepASCIIMod(loader.Module):
         progress: 0.0 - 1.0
         """
         result = []
+        if not lines:
+            return result
+            
         max_width = max(len(line) for line in lines)
         visible_width = int(max_width * progress)
         
@@ -438,8 +452,9 @@ class StepByStepASCIIMod(loader.Module):
                 if i < visible_width:
                     new_line += char
                 else:
-                    new_line += '·' if char == '█' else char
+                    new_line += '·'
             result.append(new_line)
+        
         return result
 
     def _animate_center_out(self, lines: list, progress: float) -> list:
@@ -448,19 +463,24 @@ class StepByStepASCIIMod(loader.Module):
         progress: 0.0 - 1.0
         """
         result = []
+        if not lines:
+            return result
+            
         max_width = max(len(line) for line in lines)
         center = max_width // 2
         spread = int((max_width / 2) * progress)
         
         for line in lines:
             new_line = ""
+            line_center = len(line) // 2
             for i, char in enumerate(line):
-                distance_from_center = abs(i - center)
+                distance_from_center = abs(i - line_center)
                 if distance_from_center <= spread:
                     new_line += char
                 else:
-                    new_line += '·' if char == '█' else char
+                    new_line += '·'
             result.append(new_line)
+        
         return result
 
     def _animate_wave(self, lines: list, progress: float, frame: int) -> list:
@@ -473,21 +493,19 @@ class StepByStepASCIIMod(loader.Module):
         for row_idx, line in enumerate(lines):
             new_line = ""
             for col_idx, char in enumerate(line):
-                if char == '█':
-                    # Улучшенная формула волны для более плавной анимации
-                    wave_phase = (col_idx * 0.3 + row_idx * 0.4 + frame * 0.4)
-                    wave_offset = math.sin(wave_phase) * 0.5 + 0.5
-                    
-                    # Добавляем прогресс для постепенного появления
-                    threshold = wave_offset * 0.3 + 0.7 * (1 - progress)
-                    
-                    if progress >= threshold:
-                        new_line += '█'
-                    else:
-                        new_line += '·'
-                else:
+                # Улучшенная формула волны для более плавной анимации
+                wave_phase = (col_idx * 0.3 + row_idx * 0.4 + frame * 0.4)
+                wave_offset = math.sin(wave_phase) * 0.5 + 0.5
+                
+                # Добавляем прогресс для постепенного появления
+                threshold = wave_offset * 0.3 + 0.7 * (1 - progress)
+                
+                if progress >= threshold:
                     new_line += char
+                else:
+                    new_line += '·'
             result.append(new_line)
+        
         return result
 
     def _animate_random_dots(self, lines: list, progress: float, seed: int) -> list:
@@ -497,31 +515,28 @@ class StepByStepASCIIMod(loader.Module):
         """
         random.seed(seed)
         
-        # Собираем все позиции блоков
-        blocks = []
+        # Собираем все позиции ВСЕХ символов (не только █)
+        all_positions = []
         for row_idx, line in enumerate(lines):
             for col_idx, char in enumerate(line):
-                if char == '█':
-                    blocks.append((row_idx, col_idx))
+                all_positions.append((row_idx, col_idx))
         
-        # Перемешиваем
-        random.shuffle(blocks)
-        visible_count = int(len(blocks) * progress)
-        visible_blocks = set(blocks[:visible_count])
+        # Перемешиваем все позиции
+        random.shuffle(all_positions)
+        visible_count = int(len(all_positions) * progress)
+        visible_positions = set(all_positions[:visible_count])
         
         # Рендерим
         result = []
         for row_idx, line in enumerate(lines):
             new_line = ""
             for col_idx, char in enumerate(line):
-                if char == '█':
-                    if (row_idx, col_idx) in visible_blocks:
-                        new_line += '█'
-                    else:
-                        new_line += '·'
-                else:
+                if (row_idx, col_idx) in visible_positions:
                     new_line += char
+                else:
+                    new_line += '·'
             result.append(new_line)
+        
         return result
 
     async def textasciicmd(self, message):
