@@ -296,6 +296,7 @@ class StepByStepASCIIMod(loader.Module):
 
     def __init__(self):
         self.is_running = False
+        self.animation_data = {}  # Хранилище параметров анимации {chat_id: {text, effect, mode}}
 
     def _get_char_art(self, char: str) -> list:
         """Возвращает готовый арт для одной конкретной буквы из CHAR_MAP."""
@@ -322,6 +323,60 @@ class StepByStepASCIIMod(loader.Module):
             formatted_lines.append(formatted_line + '\u200D')
         
         return '\n'.join(formatted_lines)
+
+    def _create_restart_button(self):
+        """Создаёт inline кнопку для перезапуска анимации."""
+        return [
+            [{"text": "🔄 Перезапустить анимацию", "callback": self.restart_callback}]
+        ]
+
+    async def restart_callback(self, call):
+        """Обработчик нажатия на кнопку перезапуска."""
+        chat_id = call.chat_id
+        
+        # Проверяем, есть ли сохранённые данные для этого чата
+        if chat_id not in self.animation_data:
+            await call.answer("⚠️ Данные анимации не найдены", show_alert=True)
+            return
+        
+        # Проверяем, не запущена ли уже анимация
+        if self.is_running:
+            await call.answer("⚠️ Дождитесь завершения текущей анимации", show_alert=True)
+            return
+        
+        # Получаем сохранённые параметры
+        data = self.animation_data[chat_id]
+        text = data['text']
+        effect = data['effect']
+        mode = data['mode']
+        
+        # Уведомляем пользователя
+        await call.answer("🔄 Перезапуск анимации...", show_alert=False)
+        
+        # Запускаем анимацию заново
+        self.is_running = True
+        
+        try:
+            if mode == 'single':
+                # Анимация по одной букве
+                for char in text:
+                    ascii_lines = self._get_char_art(char)
+                    await self._animate_single_char(call.message, ascii_lines, effect)
+                    await asyncio.sleep(0.3)
+            elif mode == 'all':
+                # Все буквы сразу
+                await self._animate_all_chars(call.message, text, effect)
+            
+            # После завершения показываем кнопку снова
+            await call.message.edit(
+                f"<b>✨ Анимация завершена!</b>\n"
+                f"<i>Текст: {text} | Эффект: {effect.upper()}</i>",
+                reply_markup=self._create_restart_button()
+            )
+        except Exception as e:
+            await call.message.edit(f"❌ Ошибка: {str(e)}")
+        finally:
+            self.is_running = False
 
     def _animate_fade_in(self, lines: list, progress: float) -> list:
         """
@@ -487,7 +542,7 @@ class StepByStepASCIIMod(loader.Module):
         .textascii hello fade
         """
         if self.is_running:
-            await utils.answer(message, "⚠️ Анимация уже запущена!")
+            await utils.answer(message, "⚠️ Анимация уже запущена! Дождитесь завершения.")
             return
 
         args = utils.get_args_raw(message).split()
@@ -509,6 +564,15 @@ class StepByStepASCIIMod(loader.Module):
         if effect not in valid_effects:
             effect = 'fade'
 
+        # Сохраняем параметры для перезапуска
+        chat_id = message.chat_id
+        mode = 'all' if effect == 'all' else 'single'
+        self.animation_data[chat_id] = {
+            'text': text,
+            'effect': 'wave' if effect == 'all' else effect,
+            'mode': mode
+        }
+
         self.is_running = True
         msg = await utils.answer(message, f"<code>🎬 Запуск анимации с эффектом: {effect.upper()}</code>")
         await asyncio.sleep(0.5)
@@ -524,9 +588,11 @@ class StepByStepASCIIMod(loader.Module):
                     await self._animate_single_char(msg, ascii_lines, effect)
                     await asyncio.sleep(0.3)
             
+            # После завершения показываем кнопку для перезапуска
             await msg.edit(
                 f"<b>✨ Анимация завершена!</b>\n"
-                f"<i>Эффект: {effect.upper()} | Символов: {len(text)}</i>"
+                f"<i>Текст: {text} | Эффект: {effect.upper()}</i>",
+                reply_markup=self._create_restart_button()
             )
             
         except Exception as e:
@@ -609,6 +675,10 @@ class StepByStepASCIIMod(loader.Module):
         
         Пример: .asciiall привет wave
         """
+        if self.is_running:
+            await utils.answer(message, "⚠️ Анимация уже запущена! Дождитесь завершения.")
+            return
+
         args = utils.get_args_raw(message).split()
         if not args:
             await utils.answer(message, 
@@ -623,54 +693,76 @@ class StepByStepASCIIMod(loader.Module):
         text = args[0].strip().upper()
         effect = args[1].lower() if len(args) > 1 else 'wave'
         
+        # Сохраняем параметры для перезапуска
+        chat_id = message.chat_id
+        self.animation_data[chat_id] = {
+            'text': text,
+            'effect': effect,
+            'mode': 'all'
+        }
+        
+        self.is_running = True
         msg = await utils.answer(message, f"<code>🎬 Загрузка...</code>")
         
-        # Собираем все буквы (теперь все 8×6, не нужна нормализация!)
-        all_chars_lines = []
-        
-        for char in text:
-            char_lines = self._get_char_art(char)
-            all_chars_lines.append(char_lines)
-        
-        # Склеиваем построчно БЕЗ разделителя
-        combined_lines = []
-        for row in range(6):  # Все буквы строго 6 строк
-            row_parts = []
-            for char_lines in all_chars_lines:
-                row_parts.append(char_lines[row])
-            combined_lines.append(''.join(row_parts))  # Без разделителя!
-        
-        # Анимируем с выбранным эффектом
-        frames = 20
-        delay = 0.08
-        
-        for frame in range(frames + 1):
-            progress = frame / frames
+        try:
+            # Собираем все буквы (теперь все 8×6, не нужна нормализация!)
+            all_chars_lines = []
             
-            if effect == 'fade':
-                animated_lines = self._animate_fade_in(combined_lines, progress)
-            elif effect == 'line':
-                animated_lines = self._animate_line_by_line(combined_lines, progress)
-            elif effect == 'left':
-                animated_lines = self._animate_left_to_right(combined_lines, progress)
-            elif effect == 'center':
-                animated_lines = self._animate_center_out(combined_lines, progress)
-            elif effect == 'wave':
-                animated_lines = self._animate_wave(combined_lines, progress, frame)
-            elif effect == 'random':
-                animated_lines = self._animate_random_dots(combined_lines, progress, 42)
-            else:
-                animated_lines = combined_lines
+            for char in text:
+                char_lines = self._get_char_art(char)
+                all_chars_lines.append(char_lines)
             
-            formatted_art = self._format_for_telegram(animated_lines)
-            try:
-                await msg.edit(f"<pre>{formatted_art}</pre>")
-                await asyncio.sleep(delay)
-            except:
-                pass
-        
-        # Показываем итоговый результат немного дольше
-        await asyncio.sleep(0.5)
+            # Склеиваем построчно БЕЗ разделителя
+            combined_lines = []
+            for row in range(6):  # Все буквы строго 6 строк
+                row_parts = []
+                for char_lines in all_chars_lines:
+                    row_parts.append(char_lines[row])
+                combined_lines.append(''.join(row_parts))  # Без разделителя!
+            
+            # Анимируем с выбранным эффектом
+            frames = 20
+            delay = 0.08
+            
+            for frame in range(frames + 1):
+                if not self.is_running:
+                    break
+                    
+                progress = frame / frames
+                
+                if effect == 'fade':
+                    animated_lines = self._animate_fade_in(combined_lines, progress)
+                elif effect == 'line':
+                    animated_lines = self._animate_line_by_line(combined_lines, progress)
+                elif effect == 'left':
+                    animated_lines = self._animate_left_to_right(combined_lines, progress)
+                elif effect == 'center':
+                    animated_lines = self._animate_center_out(combined_lines, progress)
+                elif effect == 'wave':
+                    animated_lines = self._animate_wave(combined_lines, progress, frame)
+                elif effect == 'random':
+                    animated_lines = self._animate_random_dots(combined_lines, progress, 42)
+                else:
+                    animated_lines = combined_lines
+                
+                formatted_art = self._format_for_telegram(animated_lines)
+                try:
+                    await msg.edit(f"<pre>{formatted_art}</pre>")
+                    await asyncio.sleep(delay)
+                except:
+                    pass
+            
+            # После завершения показываем кнопку для перезапуска
+            await asyncio.sleep(0.5)
+            await msg.edit(
+                f"<b>✨ Анимация завершена!</b>\n"
+                f"<i>Текст: {text} | Эффект: {effect.upper()}</i>",
+                reply_markup=self._create_restart_button()
+            )
+        except Exception as e:
+            await msg.edit(f"❌ Ошибка: {str(e)}")
+        finally:
+            self.is_running = False
 
     async def asciistopagecmd(self, message):
         """Команда: .asciistopage (Останавливает текущую анимацию)"""
