@@ -292,8 +292,7 @@ class TextToASCIIMod(loader.Module):
     """ASCII анимация текста крупными буквами"""
     strings = {
         "name": "TextToASCII",
-        "textascii_desc": "Показывает ASCII анимацию текста",
-        "asciistopage_desc": "Останавливает текущую анимацию"
+        "ttascii_desc": "Показывает информацию об использовании модуля"
     }
 
     def __init__(self):
@@ -341,23 +340,25 @@ class TextToASCIIMod(loader.Module):
         text = query.args
         
         if not text:
-            return {
-                "title": "TextToASCII",
-                "description": "Введите текст для анимации",
-                "message": "Использование: @bot текст"
-            }
+            return []
         
-        return {
-            "title": f"🎬 {text}",
-            "description": "Нажмите для запуска ASCII анимации",
-            "message": text.upper(),
-            "thumb": "https://img.icons8.com/color/344/text.png",
-            "reply_markup": {
-                "text": "🎬 Запустить анимацию",
-                "callback": self._start_inline_animation,
-                "args": (text.upper(),)
+        return [
+            {
+                "title": f"🎬 {text}",
+                "description": "Запустить ASCII анимацию",
+                "message": f"<code>Запуск анимации для: {text}</code>",
+                "thumb": "https://img.icons8.com/color/344/text.png",
+                "reply_markup": [
+                    [
+                        {
+                            "text": "🎬 Запустить анимацию",
+                            "callback": self._start_inline_animation,
+                            "args": (text.upper(),)
+                        }
+                    ]
+                ]
             }
-        }
+        ]
 
     async def _start_inline_animation(self, call: InlineCall, text: str):
         """Запускает анимацию из inline режима"""
@@ -421,79 +422,21 @@ class TextToASCIIMod(loader.Module):
         finally:
             self.is_running = False
 
-    async def textasciicmd(self, message):
-        """Команда: .textascii <текст>
+    async def ttasciicmd(self, message):
+        """Команда: .ttascii
         
-        Показывает ASCII анимацию текста.
-        
-        Пример: .textascii привет
+        Показывает информацию об использовании модуля.
         """
-        args = utils.get_args_raw(message)
-        if not args:
-            await utils.answer(message, 
-                "❌ Укажи текст!\n\n"
-                "<b>Пример:</b>\n"
-                "<code>.textascii привет</code>"
-            )
-            return
-
-        text = args.strip().upper()
-        self.is_running = True
+        bot_me = await message.client.get_me()
+        bot_username = bot_me.username
         
-        msg = await utils.answer(message, "<code>🎬 Запуск...</code>")
-        
-        try:
-            result_lines = [""] * 6
-            
-            for char in text:
-                if not self.is_running:
-                    break
-                    
-                char_lines = self._get_char_art(char)
-                
-                stages = [0.25, 0.5, 0.75, 1.0]
-                delay = 0.15
-                
-                for idx, progress in enumerate(stages):
-                    if not self.is_running:
-                        break
-                    
-                    animated_char = self._animate_wave(char_lines, progress, idx)
-                    
-                    temp_lines = []
-                    for row in range(6):
-                        temp_lines.append(result_lines[row] + animated_char[row])
-                    
-                    formatted_art = self._format_for_telegram(temp_lines)
-                    
-                    try:
-                        await msg.edit(f"<pre>{formatted_art}</pre>")
-                        await asyncio.sleep(delay)
-                    except:
-                        pass
-                
-                for row in range(6):
-                    result_lines[row] = result_lines[row] + char_lines[row]
-            
-            final_text = self._format_for_telegram(result_lines)
-            
-            await msg.edit(
-                f"<pre>{final_text}</pre>\n\n"
-                f"<b>✨ Анимация завершена!</b>\n\n"
-                f"<blockquote><b>📝 Текст:</b> {text}</blockquote>"
-            )
-        except Exception as e:
-            await msg.edit(f"❌ Ошибка: {str(e)}")
-        finally:
-            self.is_running = False
-
-    async def asciistopagecmd(self, message):
-        """Команда: .asciistopage
-        
-        Останавливает текущую анимацию.
-        """
-        if self.is_running:
-            self.is_running = False
-            await utils.answer(message, "⏹ Анимация остановлена.")
-        else:
-            await utils.answer(message, "ℹ️ Анимация не запущена.")
+        await utils.answer(
+            message,
+            f"<b>📝 TextToASCII - Инструкция по использованию</b>\n\n"
+            f"<b>🎬 Для создания ASCII анимации используйте inline режим:</b>\n\n"
+            f"<code>@{bot_username} textoascii текст</code>\n\n"
+            f"<b>Пример:</b>\n"
+            f"<code>@{bot_username} textoascii привет</code>\n\n"
+            f"<i>💡 После отправки нажмите на кнопку \"🎬 Запустить анимацию\"</i>\n\n"
+            f"<blockquote>⚡ Для активации inline mode вам нужно перейти в BotFather -> /mybots -> Bot Settings -> Inline Mode -> Включить \n"
+        )
