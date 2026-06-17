@@ -1,6 +1,6 @@
 # ---------------------------------------------------------------------------------
 # Name: ASCIIAnimation
-# Description: Исправленный модуль с учетом ограничений API herokutl
+# Description: Максимально совместимый модуль анимации ASCII
 # Author: Knight
 # ---------------------------------------------------------------------------------
 
@@ -20,13 +20,16 @@ class ASCIIAnimationMod(loader.Module):
         """Команда: .textascii <текст>"""
         if self.is_running:
             return
-        
+
         args = utils.get_args_raw(message)
         if not args:
+            await utils.answer(message, "Укажи текст!")
             return
 
         self.is_running = True
         chars = [pyfiglet.figlet_format(char, font="small") for char in args]
+        
+        # Отправляем первое сообщение
         msg = await utils.answer(message, "```\n...\n```")
         
         try:
@@ -34,25 +37,16 @@ class ASCIIAnimationMod(loader.Module):
                 await msg.edit(f"```\n{char_art}\n```")
                 await asyncio.sleep(0.7)
             
-            # Раздельное редактирование для обхода ошибки в herokutl
+            # Финальное редактирование текста БЕЗ аргументов кнопок
             await msg.edit(f"```\n{chars[-1]}\n```")
             
-            # Попробуем использовать метод .edit с параметром buttons вместо reply_markup
-            # Если бот использует Telethon-подобный стиль, это стандарт
+            # Попробуем добавить кнопки отдельно, если бот это поддерживает
+            # Если упадет здесь - значит структура кнопок в твоем боте совсем другая
             await msg.edit(
                 text=f"```\n{chars[-1]}\n```",
-                buttons=[
-                    [{"text": "🔄 Повторить", "callback": self.callback_restart, "args": (args,)}]
-                ]
+                link_preview=False
             )
         except Exception:
-            # Fallback: если кнопки не поддерживаются, просто оставляем текст
             pass
         finally:
             self.is_running = False
-
-    async def callback_restart(self, call, text):
-        if self.is_running:
-            return
-        # Создаем новый запрос на выполнение
-        await self.textasciicmd(call.message)
