@@ -1,17 +1,43 @@
+```python
 # ---------------------------------------------------------------------------------
-# Name: ASCIIAnimation
-# Description: Максимально совместимый модуль анимации ASCII
+# Name: StaticASCIIAnimation
+# Description: Модуль с заготовками всех букв для быстрой и стабильной анимации
 # Author: Knight
 # ---------------------------------------------------------------------------------
 
 from .. import loader, utils
-import pyfiglet
 import asyncio
 
+# Полный набор заготовок (A-Z, А-Я)
+CHAR_MAP = {
+    # Латиница
+    'A': " A \nA A\nAAA\nA A", 'B': "BB \nB B\nBB \nB B\nBB ", 'C': " CC\nC  \nC  \n CC",
+    'D': "DD \nD D\nD D\nDD ", 'E': "EEE\nE  \nEE \nE  \nEEE", 'F': "FFF\nF  \nFF \nF  \nF  ",
+    'G': " GG\nG  \nG G\n GG", 'H': "H H\nHHH\nH H", 'I': " I \n I \n I ",
+    'J': "  J\n  J\nJ J\n J ", 'K': "K K\nKK \nK K", 'L': "L  \nL  \nLLL",
+    'M': "M M\nMMM\nM M", 'N': "N N\nNNN\nN N", 'O': " O \nO O\n O ",
+    'P': "PP \nP P\nPP \nP  ", 'Q': " Q \nO O\n Q Q", 'R': "RR \nR R\nRR \nR R",
+    'S': " S \nS  \n S \n  S\n S ", 'T': "TTT\n T \n T ", 'U': "U U\nU U\n U ",
+    'V': "V V\nV V\n V ", 'W': "W W\nW W\n W ", 'X': "X X\n X \nX X",
+    'Y': "Y Y\n Y \n Y ", 'Z': "ZZZ\n  Z\n Z \nZZZ",
+    # Кириллица
+    'А': " A \nAAA\nA A", 'Б': "БББ\nБ  \nБББ\nБ Б\nБББ", 'В': "ВВ \nВ В\nВВ \nВ В\nВВ ",
+    'Г': "ГГГ\nГ  \nГ  ", 'Д': " Д \nД Д\nДДД\nД Д", 'Е': "ЕЕЕ\nЕ  \nЕЕ \nЕ  \nЕЕЕ",
+    'Ё': " Е \nЕЕЕ\nЕ  \nЕЕ ", 'Ж': "Ж Ж\n Ж \nЖ Ж", 'З': "ЗЗЗ\n  З\nЗЗЗ\n  З\nЗЗЗ",
+    'И': "И И\nИИИ\nИ И", 'Й': "ЙЙЙ\nИ И\nИИИ", 'К': "К К\nКК \nК К",
+    'Л': "Л Л\nЛ Л\nЛЛЛ", 'М': "М М\nМММ\nМ М", 'Н': "Н Н\nННН\nН Н",
+    'О': " O \nО О\n O ", 'П': "ППП\nП П\nП П", 'Р': "РР \nР Р\nРР \nР  ",
+    'С': " С \nС  \n С ", 'Т': "ТТТ\n Т \n Т ", 'У': "У У\n У \n У ",
+    'Ф': "Ф Ф\nФФФ\nФ Ф", 'Х': "Х Х\n Х \nХ Х", 'Ц': "Ц Ц\nЦ Ц\nЦЦЦ\n  Ц",
+    'Ч': "Ч Ч\nЧЧЧ\n  Ч", 'Ш': "Ш Ш\nШШШ\nШ Ш", 'Щ': "Щ Щ\nЩЩЩ\nЩ Щ\n  Щ",
+    'Ъ': "Ъ  \nЪЪ \nЪ Ъ", 'Ы': "Ы Ы\nЫЫ \nЫ Ы", 'Ь': "Ь  \nЬЬ \nЬ Ь",
+    'Э': "ЭЭЭ\nЭ  \nЭЭЭ\n  Э\nЭЭЭ", 'Ю': "Ю Ю\nЮЮ \nЮ Ю", 'Я': "ЯЯ \nЯ Я\nЯЯ \nЯ Я"
+}
+
 @loader.tds
-class ASCIIAnimationMod(loader.Module):
-    """Модуль для создания анимированного ASCII-текста."""
-    strings = {"name": "ASCIIAnimation"}
+class StaticASCIIMod(loader.Module):
+    """Модуль анимации текста через заготовки."""
+    strings = {"name": "StaticASCII"}
 
     def __init__(self):
         self.is_running = False
@@ -21,32 +47,21 @@ class ASCIIAnimationMod(loader.Module):
         if self.is_running:
             return
 
-        args = utils.get_args_raw(message)
+        args = utils.get_args_raw(message).upper()
         if not args:
             await utils.answer(message, "Укажи текст!")
             return
 
         self.is_running = True
-        chars = [pyfiglet.figlet_format(char, font="small") for char in args]
-        
-        # Отправляем первое сообщение
         msg = await utils.answer(message, "```\n...\n```")
         
         try:
-            for char_art in chars:
-                await msg.edit(f"```\n{char_art}\n```")
+            for char in args:
+                # Берем заготовку из карты или пробел, если символ не найден
+                art = CHAR_MAP.get(char, "   \n ? \n   ")
+                await msg.edit(f"```\n{art}\n```")
                 await asyncio.sleep(0.7)
-            
-            # Финальное редактирование текста БЕЗ аргументов кнопок
-            await msg.edit(f"```\n{chars[-1]}\n```")
-            
-            # Попробуем добавить кнопки отдельно, если бот это поддерживает
-            # Если упадет здесь - значит структура кнопок в твоем боте совсем другая
-            await msg.edit(
-                text=f"```\n{chars[-1]}\n```",
-                link_preview=False
-            )
-        except Exception:
-            pass
         finally:
             self.is_running = False
+
+```
