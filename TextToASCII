@@ -425,9 +425,9 @@ class TextToASCIIMod(loader.Module):
             message,
             f"<b>📝 TextToASCII - Инструкция по использованию</b>\n\n"
             f"<b>🎬 Для создания ASCII анимации используйте inline режим:</b>\n\n"
-            f"<code>@{bot_username} textoascii текст</code>\n\n"
+            f"<code>@ВашБот textoascii текст</code>\n\n"
             f"<b>Пример:</b>\n"
-            f"<code>@{bot_username} textoascii привет</code>\n\n"
+            f"<code>@ВашБот textoascii привет</code>\n\n"
             f"<i>💡 После отправки нажмите на кнопку \"🎬 Запустить анимацию\"</i>\n\n"
             f"<blockquote>⚡ Для активации inline mode вам нужно перейти в BotFather -> /mybots -> Bot Settings -> Inline Mode -> Включить \n"
         )
