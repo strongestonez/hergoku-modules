@@ -1,8 +1,8 @@
 # ---------------------------------------------------------------------------------
 # Name: TextToASCII
-# Description: Пиши символами такими большими гигантики хихи (Telegram оптимизировано).
+# Description: Inline ASCII анимации. Используй: @bot текст (Telegram оптимизировано).
 # Author: @cursedonluck (улучшено для Telegram)
-# Version: 2.6.0
+# Version: 3.0.0
 # ---------------------------------------------------------------------------------
 
 from .. import loader, utils
@@ -293,48 +293,100 @@ CHAR_MAP = {
 
 @loader.tds
 class TextToASCIIMod(loader.Module):
-    """Крупные ASCII буквы с анимацией. Используй: .textascii <текст>"""
+    """Крупные ASCII буквы с анимацией. Используй: @hergoku_bot текст"""
     strings = {
         "name": "TextToASCII",
-        "textascii_desc": "Показывает крупные ASCII буквы с анимацией",
+        "textascii_desc": "Показывает крупные ASCII буквы с анимацией (или используй inline: @bot текст)",
         "asciistopage_desc": "Останавливает текущую анимацию",
         "asciieffects_desc": "Показывает список всех доступных эффектов"
     }
 
     def __init__(self):
         self.is_running = False
+        self.animations = {}  # Словарь для хранения активных анимаций
 
-    async def _restart_animation(self, call: InlineCall, text: str, effect: str):
-        """Обработчик кнопки 'Перезапустить анимацию'"""
-        # Показываем статус на ТОМ ЖЕ сообщении
-        await call.edit("<code>🔄 Перезапуск анимации...</code>")
+    @loader.inline_everyone
+    async def textascii_inline_handler(self, query):
+        """Inline handler для @bot текст - показывает варианты с эффектами"""
+        text = query.args
+        
+        if not text:
+            return await query.e400()
+        
+        # Список всех эффектов с описаниями
+        effects = [
+            ("fade", "Плавное появление", "⚡"),
+            ("line", "Построчное появление", "📊"),
+            ("left", "Слева направо", "➡️"),
+            ("center", "От центра к краям", "🎯"),
+            ("wave", "Волновой эффект", "🌊"),
+            ("random", "Случайные пиксели", "🎲"),
+            ("all", "Все буквы сразу", "⚡")
+        ]
+        
+        # Создаём результаты для каждого эффекта
+        results = []
+        for effect_name, effect_desc, emoji in effects:
+            results.append({
+                "title": f"{emoji} {effect_desc}",
+                "description": f"Анимация текста '{text}' с эффектом {effect_name}",
+                "message": text.upper(),
+                "thumb": "https://img.icons8.com/color/344/text.png",
+                "reply_markup": [
+                    [
+                        {
+                            "text": "🎬 Запустить анимацию",
+                            "callback": self._start_animation_inline,
+                            "args": (text.upper(), effect_name)
+                        }
+                    ],
+                    [
+                        {
+                            "text": "❌ Закрыть",
+                            "action": "close"
+                        }
+                    ]
+                ]
+            })
+        
+        return results
+
+    async def _start_animation_inline(self, call, text: str, effect: str):
+        """Запускает анимацию из inline режима"""
+        # Показываем статус
+        await call.edit(f"<code>🎬 Запуск анимации...</code>")
         await asyncio.sleep(0.5)
         
         try:
             if effect == 'all':
-                # Все буквы сразу
                 await self._animate_all_chars(call, text, 'wave')
             else:
-                # По одной букве
                 for char in text:
                     ascii_lines = self._get_char_art(char)
                     await self._animate_single_char(call, ascii_lines, effect)
                     await asyncio.sleep(0.3)
             
-            # После завершения показываем форму с кнопкой снова НА ТОМ ЖЕ сообщении
+            # После завершения показываем кнопки
             await call.edit(
                 text=(
                     f"<b>✨ Анимация завершена!</b>\n\n"
-                    f"<blockquote><b>📝 Текст:</b> {text.upper()}</blockquote>\n"
+                    f"<blockquote><b>📝 Текст:</b> {text}</blockquote>\n"
                     f"<blockquote><b>🎨 Эффект:</b> {effect.upper()}</blockquote>\n\n"
-                    f"<i>💡 Нажмите кнопку ниже для повтора анимации</i>"
+                    f"<i>💡 Нажмите кнопку для повтора</i>"
                 ),
                 reply_markup=[
                     [
                         {
                             "text": "🔄 Перезапустить анимацию",
-                            "callback": self._restart_animation,
+                            "callback": self._start_animation_inline,
                             "args": (text, effect)
+                        }
+                    ],
+                    [
+                        {
+                            "text": "🎨 Выбрать другой эффект",
+                            "callback": self._show_effects_menu,
+                            "args": (text,)
                         }
                     ],
                     [
@@ -347,6 +399,44 @@ class TextToASCIIMod(loader.Module):
             )
         except Exception as e:
             await call.edit(f"❌ Ошибка: {str(e)}")
+
+    async def _show_effects_menu(self, call, text: str):
+        """Показывает меню выбора эффекта"""
+        effects = [
+            ("fade", "⚡ Плавное появление"),
+            ("line", "📊 Построчное"),
+            ("left", "➡️ Слева направо"),
+            ("center", "🎯 От центра"),
+            ("wave", "🌊 Волна"),
+            ("random", "🎲 Случайно"),
+            ("all", "⚡ Все сразу")
+        ]
+        
+        buttons = []
+        for effect_name, effect_label in effects:
+            buttons.append([
+                {
+                    "text": effect_label,
+                    "callback": self._start_animation_inline,
+                    "args": (text, effect_name)
+                }
+            ])
+        
+        buttons.append([
+            {
+                "text": "❌ Закрыть",
+                "action": "close"
+            }
+        ])
+        
+        await call.edit(
+            text=(
+                f"<b>🎨 Выберите эффект анимации</b>\n\n"
+                f"<blockquote><b>📝 Текст:</b> {text}</blockquote>\n\n"
+                f"<i>Нажмите на желаемый эффект:</i>"
+            ),
+            reply_markup=buttons
+        )
 
     def _get_char_art(self, char: str) -> list:
         """Возвращает готовый арт для одной конкретной буквы из CHAR_MAP."""
@@ -530,89 +620,34 @@ class TextToASCIIMod(loader.Module):
         return result
 
     async def textasciicmd(self, message):
-        """Команда: .textascii <текст> [эффект]
+        """Команда: .textascii
         
-        Показывает крупные ASCII буквы с анимацией.
+        Показывает крупные ASCII буквы с анимацией через inline режим.
         
-        Эффекты: fade, line, left, center, wave, random, all
-        Пример: .textascii привет wave
+        Использование:
+        1. Напиши в любом чате: @hergoku_bot твой_текст
+        2. Выбери эффект из списка
+        3. Отправь результат
         """
-        if self.is_running:
-            await utils.answer(message, "⚠️ Анимация уже запущена! Дождитесь завершения.")
-            return
-
-        args = utils.get_args_raw(message).split()
-        if not args:
-            await utils.answer(message, 
-                "❌ Укажи текст и опционально эффект!\n\n"
-                "<b>Примеры:</b>\n"
-                "<code>.textascii привет</code>\n"
-                "<code>.textascii привет wave</code>\n"
-                "<code>.textascii hello random</code>\n\n"
-                "<b>Эффекты:</b> fade, line, left, center, wave, random, all"
-            )
-            return
-
-        text = args[0].strip().upper()
-        effect = args[1].lower() if len(args) > 1 else 'fade'
+        bot_username = (await self.inline.bot.get_me()).username
         
-        valid_effects = ['fade', 'line', 'left', 'center', 'wave', 'random', 'all']
-        if effect not in valid_effects:
-            effect = 'fade'
-
-        self.is_running = True
-        
-        # Создаём inline форму СРАЗУ для анимации
-        form = await self.inline.form(
-            text=f"<code>🎬 Запуск анимации с эффектом: {effect.upper()}</code>",
-            message=message,
-            reply_markup=[],  # Пока без кнопок
-            force_me=False,
-            silent=True
+        await utils.answer(message, 
+            f"<b>🎨 TextToASCII - Inline режим</b>\n\n"
+            f"<b>Как использовать:</b>\n"
+            f"1️⃣ Напиши в любом чате:\n"
+            f"<code>@{bot_username} твой_текст</code>\n\n"
+            f"2️⃣ Выбери эффект из списка\n"
+            f"3️⃣ Отправь результат\n\n"
+            f"<b>📋 Доступные эффекты:</b>\n"
+            f"⚡ Плавное появление (fade)\n"
+            f"📊 Построчное (line)\n"
+            f"➡️ Слева направо (left)\n"
+            f"🎯 От центра (center)\n"
+            f"🌊 Волна (wave)\n"
+            f"🎲 Случайно (random)\n"
+            f"⚡ Все сразу (all)\n\n"
+            f"<i>💡 Попробуй прямо сейчас!</i>"
         )
-        
-        await asyncio.sleep(0.5)
-        
-        try:
-            if effect == 'all':
-                # Все буквы сразу с анимацией
-                await self._animate_all_chars(form, text, 'wave')
-            else:
-                # По одной букве с эффектом
-                for char in text:
-                    ascii_lines = self._get_char_art(char)
-                    await self._animate_single_char(form, ascii_lines, effect)
-                    await asyncio.sleep(0.3)
-            
-            # После завершения редактируем ТО ЖЕ inline сообщение и добавляем кнопки
-            await form.edit(
-                text=(
-                    f"<b>✨ Анимация завершена!</b>\n\n"
-                    f"<blockquote><b>📝 Текст:</b> {text.upper()}</blockquote>\n"
-                    f"<blockquote><b>🎨 Эффект:</b> {effect.upper()}</blockquote>\n\n"
-                    f"<i>💡 Нажмите кнопку ниже для повтора анимации</i>"
-                ),
-                reply_markup=[
-                    [
-                        {
-                            "text": "🔄 Перезапустить анимацию",
-                            "callback": self._restart_animation,
-                            "args": (text, effect)
-                        }
-                    ],
-                    [
-                        {
-                            "text": "❌ Закрыть",
-                            "action": "close"
-                        }
-                    ]
-                ]
-            )
-            
-        except Exception as e:
-            await form.edit(f"❌ Ошибка: {str(e)}")
-        finally:
-            self.is_running = False
 
     async def _animate_single_char(self, msg, lines: list, effect: str):
         """Анимирует одну букву с выбранным эффектом - 4 этапа (25%, 50%, 75%, 100%)."""
