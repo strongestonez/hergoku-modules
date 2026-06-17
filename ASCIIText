@@ -302,7 +302,6 @@ class StepByStepASCIIMod(loader.Module):
 
     def __init__(self):
         self.is_running = False
-        self.animation_data = {}  # Хранилище параметров анимации {chat_id: {text, effect, mode}}
 
     def _get_char_art(self, char: str) -> list:
         """Возвращает готовый арт для одной конкретной буквы из CHAR_MAP."""
@@ -329,60 +328,6 @@ class StepByStepASCIIMod(loader.Module):
             formatted_lines.append(formatted_line + '\u200D')
         
         return '\n'.join(formatted_lines)
-
-    def _create_restart_button(self):
-        """Создаёт inline кнопку для перезапуска анимации."""
-        return [
-            [{"text": "🔄 Перезапустить анимацию", "callback": self.restart_callback}]
-        ]
-
-    async def restart_callback(self, call):
-        """Обработчик нажатия на кнопку перезапуска."""
-        chat_id = call.chat_id
-        
-        # Проверяем, есть ли сохранённые данные для этого чата
-        if chat_id not in self.animation_data:
-            await call.answer("⚠️ Данные анимации не найдены", show_alert=True)
-            return
-        
-        # Проверяем, не запущена ли уже анимация
-        if self.is_running:
-            await call.answer("⚠️ Дождитесь завершения текущей анимации", show_alert=True)
-            return
-        
-        # Получаем сохранённые параметры
-        data = self.animation_data[chat_id]
-        text = data['text']
-        effect = data['effect']
-        mode = data['mode']
-        
-        # Уведомляем пользователя
-        await call.answer("🔄 Перезапуск анимации...", show_alert=False)
-        
-        # Запускаем анимацию заново
-        self.is_running = True
-        
-        try:
-            if mode == 'single':
-                # Анимация по одной букве
-                for char in text:
-                    ascii_lines = self._get_char_art(char)
-                    await self._animate_single_char(call.message, ascii_lines, effect)
-                    await asyncio.sleep(0.3)
-            elif mode == 'all':
-                # Все буквы сразу
-                await self._animate_all_chars(call.message, text, effect)
-            
-            # После завершения показываем кнопку снова
-            await call.message.edit(
-                f"<b>✨ Анимация завершена!</b>\n"
-                f"<i>Текст: {text} | Эффект: {effect.upper()}</i>",
-                reply_markup=self._create_restart_button()
-            )
-        except Exception as e:
-            await call.message.edit(f"❌ Ошибка: {str(e)}")
-        finally:
-            self.is_running = False
 
     def _animate_fade_in(self, lines: list, progress: float) -> list:
         """
@@ -570,15 +515,6 @@ class StepByStepASCIIMod(loader.Module):
         if effect not in valid_effects:
             effect = 'fade'
 
-        # Сохраняем параметры для перезапуска
-        chat_id = message.chat_id
-        mode = 'all' if effect == 'all' else 'single'
-        self.animation_data[chat_id] = {
-            'text': text,
-            'effect': 'wave' if effect == 'all' else effect,
-            'mode': mode
-        }
-
         self.is_running = True
         msg = await utils.answer(message, f"<code>🎬 Запуск анимации с эффектом: {effect.upper()}</code>")
         await asyncio.sleep(0.5)
@@ -594,11 +530,11 @@ class StepByStepASCIIMod(loader.Module):
                     await self._animate_single_char(msg, ascii_lines, effect)
                     await asyncio.sleep(0.3)
             
-            # После завершения показываем кнопку для перезапуска
+            # После завершения показываем информацию о перезапуске
             await msg.edit(
                 f"<b>✨ Анимация завершена!</b>\n"
-                f"<i>Текст: {text} | Эффект: {effect.upper()}</i>",
-                reply_markup=self._create_restart_button()
+                f"<i>Текст: {text} | Эффект: {effect.upper()}</i>\n\n"
+                f"💡 <i>Для повтора запустите команду снова</i>"
             )
             
         except Exception as e:
@@ -700,14 +636,6 @@ class StepByStepASCIIMod(loader.Module):
         text = args[0].strip().upper()
         effect = args[1].lower() if len(args) > 1 else 'wave'
         
-        # Сохраняем параметры для перезапуска
-        chat_id = message.chat_id
-        self.animation_data[chat_id] = {
-            'text': text,
-            'effect': effect,
-            'mode': 'all'
-        }
-        
         self.is_running = True
         msg = await utils.answer(message, f"<code>🎬 Загрузка...</code>")
         
@@ -759,12 +687,12 @@ class StepByStepASCIIMod(loader.Module):
                 except:
                     pass
             
-            # После завершения показываем кнопку для перезапуска
+            # После завершения показываем информацию
             await asyncio.sleep(0.5)
             await msg.edit(
                 f"<b>✨ Анимация завершена!</b>\n"
-                f"<i>Текст: {text} | Эффект: {effect.upper()}</i>",
-                reply_markup=self._create_restart_button()
+                f"<i>Текст: {text} | Эффект: {effect.upper()}</i>\n\n"
+                f"💡 <i>Для повтора запустите команду снова</i>"
             )
         except Exception as e:
             await msg.edit(f"❌ Ошибка: {str(e)}")
