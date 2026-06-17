@@ -3,7 +3,7 @@
 # Description: ASCII анимация текста крупными буквами
 # Author: @cursedonluck
 # Version: 3.2.0
-# meta banner: https://raw.githubusercontent.com/strongestonez/hergoku-modules/refs/heads/main/TextToASCII_Avatar.svg
+# meta banner: https://raw.githubusercontent.com/strongestonez/hergoku-modules/refs/heads/main/TextToASCII_Avatar.png
 # ---------------------------------------------------------------------------------
 
 from .. import loader, utils
@@ -347,7 +347,7 @@ class TextToASCIIMod(loader.Module):
                 "title": f"🎬 {text}",
                 "description": "Запустить ASCII анимацию",
                 "message": f"<code>Запуск анимации для: {text}</code>",
-                "thumb": "https://raw.githubusercontent.com/strongestonez/hergoku-modules/refs/heads/main/TextToASCII_Avatar.svg",
+                "thumb": "https://raw.githubusercontent.com/strongestonez/hergoku-modules/refs/heads/main/TextToASCII_Avatar.png",
                 "reply_markup": [
                     [
                         {
