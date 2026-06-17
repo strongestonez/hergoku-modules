@@ -297,45 +297,31 @@ class StepByStepASCIIMod(loader.Module):
     def __init__(self):
         self.is_running = False
 
-    def _get_char_art(self, char: str, fill_char: str) -> str:
-        """Возвращает арт для одной конкретной буквы с кастомной заменой символа."""
-        art = CHAR_MAP.get(char, "      \n   █  \n      \n      \n      \n      ")
-        if fill_char != "█":
-            art = art.replace("█", fill_char)
-        return art
+    def _get_char_art(self, char: str) -> str:
+        """Возвращает готовый арт для одной конкретной буквы из CHAR_MAP."""
+        return CHAR_MAP.get(char, "      \n   █  \n      \n      \n      \n      ")
 
     async def textasciicmd(self, message):
-        """Команда: .textascii <символ>|Привет (Показывает буквы по очереди)"""
+        """Команда: .textascii <текст> (Показывает буквы по очереди)"""
         if self.is_running:
             return
 
-        raw_args = utils.get_args_raw(message)
-        if not raw_args:
-            await utils.answer(message, "Укажи параметры! Пример: `.textascii █|ПРИВЕТ`")
+        text = utils.get_args_raw(message)
+        if not text:
+            await utils.answer(message, "Укажи текст! Пример: `.textascii привет`")
             return
-
-        if "|" in raw_args:
-            fill_char, text = raw_args.split("|", 1)
-            fill_char = fill_char.strip()[:1]
-        else:
-            fill_char = "█"
-            text = raw_args
 
         text = text.strip().upper()
-        if not text:
-            await utils.answer(message, "Текст пустой!")
-            return
-
         self.is_running = True
         msg = await utils.answer(message, "```\nПриготовься... Анимация запускается!\n```")
         await asyncio.sleep(1.0)
         
         try:
             for char in text:
-                ascii_art = self._get_char_art(char, fill_char)
+                ascii_art = self._get_char_art(char)
                 await msg.edit(f"```\n{ascii_art}\n```")
                 await asyncio.sleep(0.7) 
                 
-            # Финал анимации
+            # Финал анимации без багов и обрезанных строк
             await msg.edit(f"
 http://googleusercontent.com/immersive_entry_chip/0
