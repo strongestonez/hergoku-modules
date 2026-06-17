@@ -11,10 +11,7 @@ from ..inline.types import InlineCall
 import asyncio
 import math
 
-# Используем полноширинные символы для идеального отображения в Telegram
-# Используем █ (U+2588) для заполненных блоков и · (U+00B7) для пустых мест
 CHAR_MAP = {
-    # Кириллица - все буквы 8×6 символов для идеального выравнивания
     'А': [
         "···██···",
         "··█··█··",
@@ -280,7 +277,6 @@ CHAR_MAP = {
         "·█····█·"
     ],
     
-    # Пауза / Пробел - тоже 8 символов
     ' ': [
         "········",
         "········",
@@ -304,7 +300,6 @@ class TextToASCIIMod(loader.Module):
         self.is_running = False
 
     def _get_char_art(self, char: str) -> list:
-        """Возвращает готовый арт для одной конкретной буквы из CHAR_MAP."""
         return CHAR_MAP.get(char, [
             "········",
             "···██···",
@@ -315,34 +310,21 @@ class TextToASCIIMod(loader.Module):
         ])
 
     def _format_for_telegram(self, lines: list) -> str:
-        """
-        Форматирует ASCII-арт для корректного отображения в Telegram.
-        Заменяет точки на специальные пробелы и добавляет zero-width joiner.
-        """
         formatted_lines = []
         for line in lines:
-            # Заменяем точки на неразрывные пробелы
             formatted_line = line.replace('·', '\u00A0')
-            # Добавляем zero-width joiner в конец строки для предотвращения обрезки
             formatted_lines.append(formatted_line + '\u200D')
         
         return '\n'.join(formatted_lines)
 
     def _animate_wave(self, lines: list, progress: float, frame: int) -> list:
-        """
-        Волновой эффект с движением.
-        progress: 0.0 - 1.0, frame: номер кадра для анимации
-        """
         result = []
         
         for row_idx, line in enumerate(lines):
             new_line = ""
             for col_idx, char in enumerate(line):
-                # Улучшенная формула волны для более плавной анимации
                 wave_phase = (col_idx * 0.3 + row_idx * 0.4 + frame * 0.4)
                 wave_offset = math.sin(wave_phase) * 0.5 + 0.5
-                
-                # Добавляем прогресс для постепенного появления
                 threshold = wave_offset * 0.3 + 0.7 * (1 - progress)
                 
                 if progress >= threshold:
@@ -372,7 +354,6 @@ class TextToASCIIMod(loader.Module):
         text = args.strip().upper()
         self.is_running = True
         
-        # Создаём inline форму для анимации
         form = await self.inline.form(
             text="<code>🎬 Запуск анимации...</code>",
             message=message,
@@ -384,7 +365,6 @@ class TextToASCIIMod(loader.Module):
         await asyncio.sleep(0.5)
         
         try:
-            # Собираем все буквы
             all_chars_lines = []
             for char in text:
                 char_lines = self._get_char_art(char)
